@@ -2,10 +2,16 @@
 #include <stdlib.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
+#include <math.h>
+#include <string>
+#include <iostream>
 
 using namespace cv;
-
-unsigned char* readBMPFile(char const* filename, int& width, int& height, int& depth)
+using namespace std;
+unsigned char* readBMPFile( char const*  filename,
+                            int& width,
+                            int& height,
+                            int& depth)
 {
     int             i;
     FILE*           f = fopen(filename, "rb");
@@ -13,12 +19,14 @@ unsigned char* readBMPFile(char const* filename, int& width, int& height, int& d
 
     fread(info, sizeof(unsigned char), 54, f);
 
-    width  = *(int *)&info[18];
-    height = *(int *)&info[22];
-    depth  = *(int *)&info[28];
-    
+    width   = *(int *)&info[18];
+    height  = *(int *)&info[22];
+    depth   = *(int *)&info[28]; 
+
     printf("width = %d, height = %d, depth = %d\n",
-                    width, height,depth);    
+                    width, 
+                    height,
+                    depth);    
     
     int pad = 3;
     if (depth < 24)
@@ -30,8 +38,7 @@ unsigned char* readBMPFile(char const* filename, int& width, int& height, int& d
     unsigned char* res  = new unsigned char[size];
 
     fread(data, sizeof(unsigned char), size, f);
-    fclose(f);
-    
+    fclose(f);    
     
     int row_padding = width * pad;
     for(int i = 0; i < height; i++)
@@ -47,12 +54,22 @@ unsigned char* readBMPFile(char const* filename, int& width, int& height, int& d
 
 int main(int argc, char** argv)
 {
+    string X;
+    if (argc > 1)
+    {
+        X = argv[1];
+        X = "bmpreader/" + X;
+    }
+    
+    cout<<"\nFILE: "<<X<<"\n"<<endl;
+    
+    const char* filename = X.c_str();
     unsigned char* mdata;
     
     int W, H, D = 24;
-      
-    mdata = readBMPFile("bmpreader/RAY.BMP", W, H, D);
-  
+     
+    mdata = readBMPFile(filename, W, H, D);
+    
     long numColors = 1 << D;
     
     namedWindow("foo");    
