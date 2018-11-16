@@ -74,15 +74,10 @@ int main(int argc, char* argv[])
      
     mdata = readBMPFile(filename, W, H, D);
     
-    namedWindow("foo");    
-    if (D < 24){
-        Mat img(Size(W, H), CV_8U, mdata);
-        imshow("foo", img);
-    }
-    else {    
-        Mat img(Size(W, H), CV_8UC3, mdata);
-        imshow("foo", img);
-    }
+    printf("W = %d, H = %d, D = %d \n", W,H,D);
+    namedWindow("foo");
+    Mat img(Size(W, H), CV_8UC3, mdata);
+    imshow("foo", img);    
     waitKey(0);    
             
     return 0;   
