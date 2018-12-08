@@ -1,18 +1,14 @@
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/core/core.hpp>
-#include <math.h>
-#include <iostream>
-#include "tools.cuh"
-
-using namespace cv;
-using namespace std;
+#include "cudaMain.h"
+#include "tools.h"
 
 constexpr unsigned int  str2int(const char* str,  int h = 0)
 {
     return !str[h] ? 5381: (str2int(str, h + 1) * 33) ^ str[h];
 }
 
-int main(int argc, char* argv[])
+
+
+int cudaMain(int argc, char **argv)
 {
     string X;
     bool    THRESHOLD = false;
@@ -50,7 +46,7 @@ int main(int argc, char* argv[])
         }
         
         X = argv[1];
-        X = "bmpreader/" + X;
+        //X = "bmpreader/" + X;
     }
 
     else {
@@ -63,9 +59,9 @@ int main(int argc, char* argv[])
     if (THRESHOLD)
         printf("\tTHRESHOLD LIMIT = %d\n\n", limit);
     if (GRAY)
-        printf("TO GRAYSCALE...\n\n");
+        printf("TO GRAYSCALE\n\n");
     if (HISTOGRAM)
-        printf("GETTING HISTOGRAM...\n\n");
+        printf("GETTING HISTOGRAM...\n\n");    
 
     const char* filename = X.c_str();
     unsigned char* mdata;
