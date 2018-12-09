@@ -15,7 +15,7 @@ __global__ void swapPixels(unsigned char* dev_src, unsigned char* dev_res, int r
         dev_res[x * cols + y] = dev_src[(rows - x - 1) * cols + y];
 }
 
-__global__ void meanFilter_gpu(unsigned char* dev_src, unsigned char* dev_res, int rows, int cols)
+__global__ void meanFilter_gpu(unsigned char* dev_src, unsigned char* dev_res, int rows, int cols, float* dev_kernel)
 {
     int x       = threadIdx.x + blockIdx.x * blockDim.x;
     int y       = threadIdx.y + blockIdx.y * blockDim.y;
@@ -26,7 +26,7 @@ __global__ void meanFilter_gpu(unsigned char* dev_src, unsigned char* dev_res, i
     if ((x < rows) & (y < cols))
     {
         long pos = x * cols + y;
-        float tmp = (float)dev_src[pos];
+        float tmp = (float)dev_src[pos]*dev_kernel[0];
 
         /*
         * Cruz
@@ -34,21 +34,21 @@ __global__ void meanFilter_gpu(unsigned char* dev_src, unsigned char* dev_res, i
         */
 
         if (pos - 3     > lim_inf)
-            tmp += (float)dev_src[pos -    3];
+            tmp += ((float)dev_src[pos -    3]*dev_kernel[0]);
         else
             tmp += (float)dev_src[pos];
         if (pos + 3     < lim_sup)
-            tmp += (float)dev_src[pos +   3];
+            tmp += ((float)dev_src[pos +   3]*dev_kernel[0]);
         else
             tmp += (float)dev_src[pos];
 
         if (pos - cols - cols/3  > lim_inf)
-            tmp += (float)dev_src[pos - cols - cols/3];
+            tmp += ((float)dev_src[pos - cols - cols/3]*dev_kernel[0]);
         else
             tmp += (float)dev_src[pos];
 
         if (pos + cols + cols/3  > lim_inf)
-            tmp += (float)dev_src[pos + cols + cols/3];
+            tmp += ((float)dev_src[pos + cols + cols/3]*dev_kernel[0]);
         else
             tmp += (float)dev_src[pos];
 
@@ -57,34 +57,86 @@ __global__ void meanFilter_gpu(unsigned char* dev_src, unsigned char* dev_res, i
         * ========
         */
         if (pos - cols - cols/3 - 3 > lim_inf)
-            tmp += (float)dev_src[pos - cols - cols/3 - 3];
+            tmp += ((float)dev_src[pos - cols - cols/3 - 3]*dev_kernel[0]);
         else
             tmp += (float)dev_src[pos];
 
         if (pos - cols - cols/3 + 3 > lim_inf)
-            tmp += (float)dev_src[pos - cols - cols/3 + 3];
+            tmp += ((float)dev_src[pos - cols - cols/3 + 3]*dev_kernel[0]);
         else
             tmp += (float)dev_src[pos];
 
         if (pos + cols + cols/3 - 3 > lim_inf)
-            tmp += (float)dev_src[pos + cols + cols/3 - 3];
+            tmp += ((float)dev_src[pos + cols + cols/3 - 3]*dev_kernel[0]);
         else
             tmp += (float)dev_src[pos];           
         if (pos + cols + cols/3 + 3 > lim_inf)
-            tmp += (float)dev_src[pos + cols + cols/3 + 3];
+            tmp += ((float)dev_src[pos + cols + cols/3 + 3]*dev_kernel[0]);
         else
             tmp += (float)dev_src[pos];   
 
         dev_res[pos] = (unsigned char)(tmp/9); 
     }
 }
+unsigned char * FilterOp(unsigned char* data,  int height, int width, float* kernel)
+{
+    
+    unsigned char *dev_data;
+    unsigned char *dev_res;
+    float         *dev_kernel;
 
+    int sizeImg = width * height * 3;
+
+    unsigned char* res  = new unsigned char[sizeImg];
+    cudaMalloc((void**)&dev_data, sizeImg * sizeof(unsigned char));
+    cudaMalloc((void**)&dev_res , sizeImg * sizeof(unsigned char));
+    cudaMalloc((void**)&dev_kernel , sizeImg * sizeof(unsigned char));
+
+    cudaMemcpy(dev_data, data, sizeImg * sizeof(unsigned char),cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_res , res , sizeImg * sizeof(unsigned char),cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_kernel , kernel , sizeImg * sizeof(unsigned char),cudaMemcpyHostToDevice);
+
+    int DIM1 = height;
+    int DIM2 = width * 3;
+
+    dim3 grids(DIM1/16 + 1, DIM2/16 + 1);
+    dim3 threads(16,16);
+
+    meanFilter_gpu<<<grids, threads>>>(dev_data, dev_res, DIM1, DIM2, dev_kernel);
+
+    cudaMemcpy(data, dev_data, sizeImg * sizeof(unsigned char),cudaMemcpyDeviceToHost);
+    cudaMemcpy(res , dev_res , sizeImg * sizeof(unsigned char),cudaMemcpyDeviceToHost);
+
+    cudaFree(dev_data);
+    cudaFree(dev_res);
+    cudaFree(dev_kernel);
+
+    return res;
+
+}
 unsigned char *meanFilter(unsigned char* data, int height, int width)
 {
-    int sizeOutput = width * height *3;
+    //int sizeOutput = width * height *3;
     
-    unsigned char* res  = new unsigned char[sizeOutput];
-    
+    //unsigned char* res  = new unsigned char[sizeOutput];
+
+    unsigned char* res;
+
+    float *kernel = new float[9];
+
+
+    kernel[0] = 1.0;
+    kernel[1] = 1.0;
+    kernel[2] = 1.0;
+    kernel[3] = 1.0;
+    kernel[4] = 1.0;
+    kernel[5] = 1.0;
+    kernel[6] = 1.0;
+    kernel[7] = 1.0;
+    kernel[8] = 1.0;
+
+    res = FilterOp(data , height, width, kernel);
+    /*
     unsigned char *dev_data;
     unsigned char *dev_res;
 
@@ -107,7 +159,7 @@ unsigned char *meanFilter(unsigned char* data, int height, int width)
 
     cudaFree(dev_data);
     cudaFree(dev_res);
-
+    */
     return res;
 }
 
