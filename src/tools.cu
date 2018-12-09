@@ -26,13 +26,27 @@ __global__ void meanFilter_gpu(unsigned char* dev_src, unsigned char* dev_res, i
     if ((x < rows) & (y < cols))
     {
         long pos = x * cols + y;
-        float tmp = (float)dev_src[pos]*dev_kernel[0];
+        float tmp = (float)dev_src[pos]*dev_kernel[4];
+
+        tmp += ((float)dev_src[pos -   3]*dev_kernel[3]);
+        tmp += ((float)dev_src[pos +   3]*dev_kernel[5]);
+
+        tmp += ((float)dev_src[pos - cols - cols/3]*dev_kernel[1]);
+        tmp += ((float)dev_src[pos + cols + cols/3]*dev_kernel[7]);
+
+        tmp += ((float)dev_src[pos - cols - cols/3 - 3]*dev_kernel[0]);
+        tmp += ((float)dev_src[pos - cols - cols/3 + 3]*dev_kernel[2]);
+
+        tmp += ((float)dev_src[pos + cols + cols/3 - 3]*dev_kernel[6]);
+        tmp += ((float)dev_src[pos + cols + cols/3 + 3]*dev_kernel[8]);
+
 
         /*
         * Cruz
         * ========
         */
 
+        /*
         if (pos - 3     > lim_inf)
             tmp += ((float)dev_src[pos -    3]*dev_kernel[0]);
         else
@@ -52,10 +66,12 @@ __global__ void meanFilter_gpu(unsigned char* dev_src, unsigned char* dev_res, i
         else
             tmp += (float)dev_src[pos];
 
+        */
         /*
         * Esquinas
         * ========
         */
+        /*
         if (pos - cols - cols/3 - 3 > lim_inf)
             tmp += ((float)dev_src[pos - cols - cols/3 - 3]*dev_kernel[0]);
         else
@@ -74,8 +90,8 @@ __global__ void meanFilter_gpu(unsigned char* dev_src, unsigned char* dev_res, i
             tmp += ((float)dev_src[pos + cols + cols/3 + 3]*dev_kernel[0]);
         else
             tmp += (float)dev_src[pos];   
-
-        dev_res[pos] = (unsigned char)(tmp/9); 
+        */
+        dev_res[pos] = (unsigned char)tmp; 
     }
 }
 unsigned char * FilterOp(unsigned char* data,  int height, int width, float* kernel)
@@ -125,15 +141,15 @@ unsigned char *meanFilter(unsigned char* data, int height, int width)
     float *kernel = new float[9];
 
 
-    kernel[0] = 1.0;
-    kernel[1] = 1.0;
-    kernel[2] = 1.0;
-    kernel[3] = 1.0;
-    kernel[4] = 1.0;
-    kernel[5] = 1.0;
-    kernel[6] = 1.0;
-    kernel[7] = 1.0;
-    kernel[8] = 1.0;
+    kernel[0] = 1.0/9.0;
+    kernel[1] = 1.0/9.0;
+    kernel[2] = 1.0/9.0;
+    kernel[3] = 1.0/9.0;
+    kernel[4] = 1.0/9.0;
+    kernel[5] = 1.0/9.0;
+    kernel[6] = 1.0/9.0;
+    kernel[7] = 1.0/9.0;
+    kernel[8] = 1.0/9.0;
 
     res = FilterOp(data , height, width, kernel);
     /*
