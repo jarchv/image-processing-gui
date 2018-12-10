@@ -9,46 +9,13 @@
 
 #include "cudaMain.h"
 #include "tools.h"
-
-int WIDTH  = 0;
-int HEIGHT = 0;
+#include "base.h"
 
 cv::Mat img;
 cv::Mat img_res;
+cv::Mat IMAGE;
+cv::Mat frame = cv::Mat(720, 1280, CV_8UC3);
 
-unsigned char* mdata;
-
-/*
-double getResizeFactor(int width, int height)
-{
-    double maxDim = (double)max(width,height);
-
-    double ftr = 480/maxDim;
-    ftr = (ftr > 1) ? 1: ftr;
-    
-    return ftr;
-}
-
-void Mat2Mat(cv::Mat& src, cv::Mat& dst, int x0, int y0)
-{
-    for(int i = x0; i < x0 + src.rows; i++)
-    {
-        for(int j = y0; j < y0 + src.cols; j++)
-        {
-            dst.at<cv::Vec3b>(i, j) = src.at<cv::Vec3b>(i-x0, j-y0);
-        }
-    }
-}
-
-void copy(unsigned char* src, unsigned char* dst, int size)
-{
-    for(int i = 0; i < size; i++)
-    {
-        dst[i] = src[i];
-    }
-}
-
-*/
 int cudaMain(int argc, char **argv)
 {
     std::string X;
@@ -56,9 +23,11 @@ int cudaMain(int argc, char **argv)
     if (argc == 1)
     {
         X = "files/24BITS.BMP";
-        X = "../" + X; 
-        const char* filename = X.c_str();        
+        X = "../" + X;
+
+        filename = X.c_str();        
         std::cout<<"\nFILE: "<<X<<"\n"<<std::endl;
+        
         mdata = readBMPFile(filename, WIDTH, HEIGHT);
         img   = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, mdata);
     }
@@ -70,8 +39,10 @@ int cudaMain(int argc, char **argv)
             {
                 X = argv[2];
                 X = "../" + X; 
-                const char* filename = X.c_str();
+                
+                filename = X.c_str();
                 std::cout<<"\nFILE: "<<X<<"\n"<<std::endl;
+                
                 img     = cv::imread(filename,cv::IMREAD_COLOR );
                 WIDTH   = (int)img.cols;
                 HEIGHT  = (int)img.rows;
@@ -82,7 +53,8 @@ int cudaMain(int argc, char **argv)
         else {
             X = argv[1];
             X = "../" + X; 
-            const char* filename = X.c_str();        
+            
+            filename = X.c_str();        
             std::cout<<"\nFILE: "<<X<<"\n"<<std::endl;
             mdata = readBMPFile(filename, WIDTH, HEIGHT);
             img   = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, mdata);
@@ -100,31 +72,13 @@ int cudaMain(int argc, char **argv)
     cv::namedWindow(WINDOW_NAME);
     
 
-    double factor = getResizeFactor(WIDTH, HEIGHT);
+    factor = getResizeFactor(WIDTH, HEIGHT);
 
     cv::resize(img, img_res, cv::Size(), factor, factor, cv::INTER_LINEAR );
     cvui::init(WINDOW_NAME);
 
-    cv::Mat frame = cv::Mat(720, 1280, CV_8UC3);
-
+    toDisplay = new unsigned char[WIDTH * HEIGHT * 3];
     
-    double iter          = 1;
-    int prev_iter        = (int)iter;
-    bool USE_MEAN_FILTER = false;
-    bool USE_LAPLACIAN_FILTER = false;
-    bool USE_CHROMATIC        = false;
-    bool USE_GRAY             = false;
-    bool DONE                 = true;
-    
-    cv::Mat IMAGE;
-
-    char SET_CODE = USE_MEAN_FILTER * 2 + 
-                    USE_LAPLACIAN_FILTER * 4 +
-                    USE_GRAY * 8 +
-                    USE_CHROMATIC * 16;
-
-    unsigned char* toDisplay = new unsigned char[WIDTH * HEIGHT * 3];
-
     while (true)
     {
         frame = cv::Scalar(38, 36, 26);     
@@ -165,7 +119,7 @@ int cudaMain(int argc, char **argv)
             }
             case 8: {
                 if (DONE) {
-                    unsigned char* grayimg = toGray(mdata, WIDTH, HEIGHT);
+                    grayimg = toGray(mdata, WIDTH, HEIGHT);
                     cv::Mat grayCV(cv::Size(WIDTH, HEIGHT), CV_8UC1, grayimg);
                     cvtColor(grayCV, grayCV, cv::COLOR_GRAY2RGB);
                     cv::resize(grayCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
@@ -176,7 +130,7 @@ int cudaMain(int argc, char **argv)
             }
             case 16: {
                     if (DONE){
-                        unsigned char* chromimg = toChromatic(mdata, WIDTH, HEIGHT);
+                        chromimg = toChromatic(mdata, WIDTH, HEIGHT);
                         cv::Mat chromCV(cv::Size(WIDTH, HEIGHT), CV_8UC3, chromimg);
                         cv::resize(chromCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
 
@@ -225,7 +179,8 @@ int cudaMain(int argc, char **argv)
         Mat2Mat(IMAGE, frame, 50, 720);
         
         cv::imshow(WINDOW_NAME, frame);
-        char k = cv::waitKey(1);
+        
+        k = cv::waitKey(1);
 
         if (k == 27){
             std::cout << "[ESC] : break" << std::endl;

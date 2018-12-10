@@ -18,6 +18,7 @@ add_library(cuda_base
     src/cudaMain.cu
     src/tools.cu
     src/tools.h
+    src/base.h
   )
 
 target_compile_features(cuda_base PUBLIC cxx_std_11)
