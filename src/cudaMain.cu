@@ -151,14 +151,14 @@ int cudaMain(int argc, char **argv)
             case 32: {
                 if (DONE){
                     grayimg = toGray(mdata, WIDTH, HEIGHT);
-                    img2fft = FFT(grayimg, WIDTH, HEIGHT);
+                    img2fft = FFT(grayimg, HEIGHT, WIDTH);
                     imgBC   = BC(img2fft, (float)brig, cont, WIDTH * HEIGHT);
 
                     cv::Mat grayCV(cv::Size(WIDTH, HEIGHT), CV_8U, imgBC);
 
                     cv::Mat swapGray = fftSwap(grayCV, WIDTH, HEIGHT);
                     cvtColor(swapGray, swapGray, cv::COLOR_GRAY2RGB);
-                    cv::resize(swapGray, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+                    cv::resize(swapGray, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
                     prev_brig = brig;
                     prev_cont = cont; 
                     DONE = false;
@@ -171,7 +171,7 @@ int cudaMain(int argc, char **argv)
         }
 
         cvui::window(frame, 10, 10, 180, 480, "Settings");
-        cvui::window(frame, 720 , 10, 520, 560, "Picture");
+        cvui::window(frame, 720 , 10, 520, 680, "Picture");
         
         if (cvui::checkbox(frame, 15, 35, "Mean Filter", &USE_MEAN_FILTER)){
             USE_LAPLACIAN_FILTER = false;
@@ -212,13 +212,13 @@ int cudaMain(int argc, char **argv)
                     USE_CHROMATIC        * 16 +
                     USE_FFT * 32;
 
-        cvui::trackbar(frame, 828, 420, 300, &brig,   0,  255,   1, "",cvui::TRACKBAR_HIDE_LABELS);
-        cvui::trackbar(frame, 828, 460, 300, &cont, 0.1, 10.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS);
-        cvui::trackbar(frame, 828, 500, 300, &iter, 0.0, 20.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS); //"%1.Lf"
+        cvui::trackbar(frame, 828, 550, 300, &brig,   0,  255,   1, "",cvui::TRACKBAR_HIDE_LABELS);
+        cvui::trackbar(frame, 828, 585, 300, &cont, 0.1, 100.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS);
+        cvui::trackbar(frame, 828, 615, 300, &iter, 0.0, 20.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS); //"%1.Lf"
 
-        cvui::printf(frame, 760, 440, 0.4, 0xeeeeee, "Brightness");
-        cvui::printf(frame, 760, 480, 0.4, 0xeeeeee, "Contrast");
-        cvui::printf(frame, 760, 520, 0.4, 0xeeeeee, "Mean Filter");
+        cvui::printf(frame, 760, 560, 0.4, 0xeeeeee, "Brightness");
+        cvui::printf(frame, 760, 595, 0.4, 0xeeeeee, "Contrast");
+        cvui::printf(frame, 760, 625, 0.4, 0xeeeeee, "Mean Filter");
         
         if(cvui::button(frame, 10, 680, "&Quit")){
             break;
@@ -226,7 +226,7 @@ int cudaMain(int argc, char **argv)
 
         cvui::update();
         int xpos =  (int)((520 - IMAGE.cols)/2) + 720;
-        int ypos =  50+20;
+        int ypos =  50+0;
         Mat2Mat(IMAGE, frame, ypos, xpos);
         cv::imshow(WINDOW_NAME, frame);
         
@@ -238,7 +238,11 @@ int cudaMain(int argc, char **argv)
     }  
 
     free(toDisplay);
-    free(mdata);
-    
+    //free(mdata);
+    free(grayimg);
+    free(chromimg);
+    free(img2fft);
+    free(imgBC);
+
     return 0;   
 }

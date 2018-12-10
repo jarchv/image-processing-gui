@@ -368,6 +368,8 @@ unsigned char* toGray(unsigned char* src, int width, int height)
     {
         res[i] = (unsigned char)(sumRGB[i]/3);
     }
+    free(sumRGB);
+
     return res;
 }
 
@@ -390,6 +392,8 @@ __global__ void getP(double* dev_data, double* dev_P_real, double* dev_P_imag, i
     int x       = threadIdx.x + blockIdx.x * blockDim.x;
     int y       = threadIdx.y + blockIdx.y * blockDim.y;
 
+    int pitch = blockDim.x * gridDim.x;
+
     if ((x < cols) & (y < rows))
     {
         double tempReal1 = 0.0;
@@ -407,7 +411,9 @@ __global__ void getP(double* dev_data, double* dev_P_real, double* dev_P_imag, i
 
         tempReal1 /= (double)cols;
         tempImag1 /= (double)cols;
-        
+        //if (x > 638 & x < 641){
+        //    printf("pos : %d, cols : %d, rows: %d, x : %d, y : %d, DIM1 %d, DIM2 %d\n", pos, cols, rows,x,y, gridDim.x, gridDim.y);
+        //}
         dev_P_real[pos] = tempReal1;
         dev_P_imag[pos] = tempImag1;
     }       
@@ -434,7 +440,9 @@ __global__ void REAL_IMG_gpu(double* dev_data, double* dev_res_real, double* dev
                           sin(theta2) * dev_P_real[jc * cols + x]);
 
         }
-
+        //if (pos > 200000 & pos < 200002){
+        //    printf("pos : %d, cols : %d, rows: %d\n", pos, cols, rows);
+        //}
         dev_res_real[pos] = tempReal2/(double)rows;
         dev_res_imag[pos] = tempImag2/(double)rows;
     }    
@@ -471,11 +479,11 @@ void getComp(double* data, double* res1, double* res2, int width, int height)
     int DIM1 = width;
     int DIM2 = height;
 
-    dim3 grids(DIM1/32 + 1, DIM2/32 + 1);
-    dim3 threads(32,32);
+    dim3 blocks(DIM2/16 + 1, DIM1/16 + 1);
+    dim3 threads(16,16);
 
-    getP<<<grids, threads>>>(dev_data, dev_P_real, dev_P_imag, DIM1, DIM2);
-    REAL_IMG_gpu<<<grids, threads>>>(dev_data, dev_res_real, dev_res_imag, dev_P_real, dev_P_imag, DIM1, DIM2);
+    getP<<<blocks, threads>>>(dev_data, dev_P_real, dev_P_imag, DIM1, DIM2);
+    REAL_IMG_gpu<<<blocks, threads>>>(dev_data, dev_res_real, dev_res_imag, dev_P_real, dev_P_imag, DIM1, DIM2);
 
     cudaMemcpy(data, dev_data, sizeImg * sizeof(double),cudaMemcpyDeviceToHost);
     cudaMemcpy(res1 , dev_res_real , sizeImg * sizeof(double),cudaMemcpyDeviceToHost);
@@ -550,6 +558,7 @@ unsigned char* FFT(unsigned char* src, int width, int height)
     free(srcF);
     free(realComp);
     free(imagComp);
+    free(resF);
 
     return res;
 }
@@ -635,6 +644,7 @@ unsigned char* BC(unsigned char* src, float B, float C, int size)
     {
         res[i] = (unsigned char)srcF[i];
     }
+    free(srcF);
 
     return res;
 }
