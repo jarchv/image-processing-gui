@@ -31,5 +31,8 @@ unsigned char*  toChromatic(unsigned char* src, int width, int height);
 double          getResizeFactor(int width, int height);
 void            Mat2Mat(cv::Mat& src, cv::Mat& dst, int x0, int y0);
 void            copy(unsigned char* src, unsigned char* dst, int size);
+cv::Mat         fftSwap(cv::Mat src, int cols, int rows);
 
+unsigned char* FFT(unsigned char* src, int width, int height);
+void getComp(float* data, float* res1, float* res2, int width, int height);
 #endif

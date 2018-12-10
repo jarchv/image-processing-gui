@@ -101,8 +101,8 @@ int cudaMain(int argc, char **argv)
                     cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
                     DONE = false;
                     prev_iter = (int)iter;
-                    break;
                 }
+                break;
             }
             case 4: {
                 if (DONE){
@@ -113,9 +113,9 @@ int cudaMain(int argc, char **argv)
 
                     cvtColor(IMAGE, IMAGE, cv::COLOR_RGB2GRAY);
                     cvtColor(IMAGE, IMAGE, cv::COLOR_GRAY2RGB);
-                    DONE = false;
-                    break;
+                    DONE = false;   
                 }
+                break;
             }
             case 8: {
                 if (DONE) {
@@ -123,72 +123,98 @@ int cudaMain(int argc, char **argv)
                     cv::Mat grayCV(cv::Size(WIDTH, HEIGHT), CV_8UC1, grayimg);
                     cvtColor(grayCV, grayCV, cv::COLOR_GRAY2RGB);
                     cv::resize(grayCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
-
-                    DONE = false;
-                    break;
+                    DONE = false; 
                 }
+                break;
             }
             case 16: {
-                    if (DONE){
-                        chromimg = toChromatic(mdata, WIDTH, HEIGHT);
-                        cv::Mat chromCV(cv::Size(WIDTH, HEIGHT), CV_8UC3, chromimg);
-                        cv::resize(chromCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
-
-                        DONE = false;
-                    break;
+                if (DONE){
+                    chromimg = toChromatic(mdata, WIDTH, HEIGHT);
+                    cv::Mat chromCV(cv::Size(WIDTH, HEIGHT), CV_8UC3, chromimg);
+                    cv::resize(chromCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+                    DONE = false;    
                 }
+                break;
+            }
+            case 32: {
+                if (DONE){
+                    grayimg = toGray(mdata, WIDTH, HEIGHT);
+                    img2fft = FFT(grayimg, WIDTH, HEIGHT); 
+                    cv::Mat grayCV(cv::Size(WIDTH, HEIGHT), CV_8U, img2fft);
+
+                    cv::Mat swapGray = fftSwap(grayCV, WIDTH, HEIGHT);
+                    cvtColor(swapGray, swapGray, cv::COLOR_GRAY2RGB);
+                    cv::resize(swapGray, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+                    DONE = false; 
+                }
+                break;
             }
         }
 
         cvui::window(frame, 10, 10, 180, 480, "Settings");
-        cvui::window(frame, 720 - (520-IMAGE.cols)/2, 50 - 40, 520, 560, "Picture");
+        cvui::window(frame, 720 , 10, 520, 560, "Picture");
         
         if (cvui::checkbox(frame, 15, 35, "Mean Filter", &USE_MEAN_FILTER)){
             USE_LAPLACIAN_FILTER = false;
             USE_CHROMATIC = false;
             USE_GRAY = false;
+            USE_FFT  = false;
         } 
         if (cvui::checkbox(frame, 15, 55, "Laplacian Filter", &USE_LAPLACIAN_FILTER)){
             USE_MEAN_FILTER = false;
             USE_CHROMATIC = false;
             USE_GRAY = false;
+            USE_FFT  = false;
         }
         if (cvui::checkbox(frame, 15, 75, "Gray Scale", &USE_GRAY)){
             USE_MEAN_FILTER = false;
             USE_LAPLACIAN_FILTER = false;
             USE_CHROMATIC = false;
+            USE_FFT  = false;
         }
+
         if (cvui::checkbox(frame, 15, 95, "Chromatic", &USE_CHROMATIC)){
             USE_MEAN_FILTER = false;
             USE_LAPLACIAN_FILTER = false;
             USE_GRAY = false;
+            USE_FFT  = false;
         }
 
-        SET_CODE =  USE_MEAN_FILTER * 2 + 
+        if (cvui::checkbox(frame, 15, 115, "FFT", &USE_FFT)){
+            USE_MEAN_FILTER = false;
+            USE_LAPLACIAN_FILTER = false;
+            USE_GRAY = false;
+            USE_CHROMATIC = false;
+        }
+
+        SET_CODE =  USE_MEAN_FILTER      * 2 + 
                     USE_LAPLACIAN_FILTER * 4 +
-                    USE_GRAY * 8 +
-                    USE_CHROMATIC * 16;
-        cvui::trackbar(frame, 808, 500, 300, &iter, 0.0, 20.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS); //"%1.Lf"
-        cvui::printf(frame, 730, 520, 0.4, 0xeeeeee, "Mean Filter");
+                    USE_GRAY             * 8 +
+                    USE_CHROMATIC        * 16 +
+                    USE_FFT * 32;
+
+        cvui::trackbar(frame, 828, 500, 300, &iter, 0.0, 20.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS); //"%1.Lf"
+        cvui::printf(frame, 760, 520, 0.4, 0xeeeeee, "Mean Filter");
 
         if(cvui::button(frame, 10, 680, "&Quit")){
             break;
         }
-        cvui::update();
 
-        Mat2Mat(IMAGE, frame, 50, 720);
-        
+        cvui::update();
+        int xpos =  (int)((520 - IMAGE.cols)/2) + 720;
+        int ypos =  50+20;
+        Mat2Mat(IMAGE, frame, ypos, xpos);
         cv::imshow(WINDOW_NAME, frame);
         
         k = cv::waitKey(1);
-
         if (k == 27){
             std::cout << "[ESC] : break" << std::endl;
             break;
         }
-
     }  
+
     free(toDisplay);
     free(mdata);
+    
     return 0;   
 }

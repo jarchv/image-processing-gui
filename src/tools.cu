@@ -6,6 +6,9 @@
 #include "cudaHeaders.h"
 #include "tools.h"
 
+# define M_PI 3.14159265358979323846 
+//float M_PI = 3.1416;
+
 __global__ void FilterOp_gpu(unsigned char* dev_src, unsigned char* dev_res, int rows, int cols, float* dev_kernel)
 {
     int x       = threadIdx.x + blockIdx.x * blockDim.x;
@@ -382,8 +385,223 @@ unsigned char* toChromatic(unsigned char* src, int width, int height)
     return res;
 }
 
+__global__ void getP(double* dev_data, double* dev_P_real, double* dev_P_imag, int rows, int cols)
+{
+    int x       = threadIdx.x + blockIdx.x * blockDim.x;
+    int y       = threadIdx.y + blockIdx.y * blockDim.y;
 
-// UTILS
+    if ((x < cols) & (y < rows))
+    {
+        double tempReal1 = 0.0;
+        double tempImag1 = 0.0;
+        
+        double theta1;
+        int  pos  = y * cols + x;
+        
+        for (int ic = 0; ic < cols; ic++)
+        {
+            theta1 = -2.0 * M_PI * x * ic/(double)cols;
+            tempReal1 += dev_data[y * cols + ic] * cos(theta1);
+            tempImag1 += dev_data[y * cols + ic] * sin(theta1);
+        }
+
+        tempReal1 /= (double)cols;
+        tempImag1 /= (double)cols;
+        
+        dev_P_real[pos] = tempReal1;
+        dev_P_imag[pos] = tempImag1;
+    }       
+}
+__global__ void REAL_IMG_gpu(double* dev_data, double* dev_res_real, double* dev_res_imag,double* dev_P_real, double* dev_P_imag, int rows, int cols)
+{
+    int x       = threadIdx.x + blockIdx.x * blockDim.x;
+    int y       = threadIdx.y + blockIdx.y * blockDim.y;
+
+    if ((x < cols) & (y < rows))
+    {
+        double theta2;
+        double tempReal2 = 0.0;
+        double tempImag2 = 0.0;
+
+        int  pos  = y * cols + x;
+        for (int jc = 0; jc < rows; jc++)
+        {
+            theta2     = -2.0 * M_PI * (y * jc/(double)rows);
+            tempReal2 += (cos(theta2) * dev_P_real[jc * cols + x] -
+                          sin(theta2) * dev_P_imag[jc * cols + x]);
+
+            tempImag2 += (cos(theta2) * dev_P_imag[jc * cols + x] +
+                          sin(theta2) * dev_P_real[jc * cols + x]);
+
+        }
+
+        dev_res_real[pos] = tempReal2/(double)rows;
+        dev_res_imag[pos] = tempImag2/(double)rows;
+    }    
+}
+
+void getComp(double* data, double* res1, double* res2, int width, int height)
+{
+    double *P_real = new double[width * height];
+    double *P_imag = new double[width * height];
+
+    double *dev_data;
+    double *dev_res_real ;
+    double *dev_res_imag;
+
+    double *dev_P_real;
+    double *dev_P_imag;
+
+    int sizeImg = width * height;
+
+    cudaMalloc((void**)&dev_data, sizeImg * sizeof(double));
+    cudaMalloc((void**)&dev_res_real , sizeImg * sizeof(double));
+    cudaMalloc((void**)&dev_res_imag , sizeImg * sizeof(double));
+
+    cudaMalloc((void**)&dev_P_real , sizeImg * sizeof(double));
+    cudaMalloc((void**)&dev_P_imag , sizeImg * sizeof(double));
+
+    cudaMemcpy(dev_data, data, sizeImg * sizeof(double),cudaMemcpyHostToDevice);
+    //cudaMemcpy(dev_res_real , res1 , sizeImg * sizeof(double),cudaMemcpyHostToDevice);
+    //cudaMemcpy(dev_res_imag , res2 , sizeImg * sizeof(double),cudaMemcpyHostToDevice);    
+
+    cudaMemcpy(dev_P_real , P_real , sizeImg * sizeof(double),cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_P_imag , P_imag , sizeImg * sizeof(double),cudaMemcpyHostToDevice); 
+
+    int DIM1 = width;
+    int DIM2 = height;
+
+    dim3 grids(DIM1/32 + 1, DIM2/32 + 1);
+    dim3 threads(32,32);
+
+    getP<<<grids, threads>>>(dev_data, dev_P_real, dev_P_imag, DIM1, DIM2);
+    REAL_IMG_gpu<<<grids, threads>>>(dev_data, dev_res_real, dev_res_imag, dev_P_real, dev_P_imag, DIM1, DIM2);
+
+    cudaMemcpy(data, dev_data, sizeImg * sizeof(double),cudaMemcpyDeviceToHost);
+    cudaMemcpy(res1 , dev_res_real , sizeImg * sizeof(double),cudaMemcpyDeviceToHost);
+    cudaMemcpy(res2 , dev_res_imag , sizeImg * sizeof(double),cudaMemcpyDeviceToHost);
+
+    cudaFree(dev_data);
+    cudaFree(dev_res_real);
+    cudaFree(dev_res_imag);
+    cudaFree(dev_P_real);
+    cudaFree(dev_P_imag);  
+
+    free(P_real);
+    free(P_imag);
+}
+unsigned char* FFT(unsigned char* src, int width, int height)
+{
+    double* srcF     = new double[width * height];
+    double* realComp = new double[width * height];
+    double* imagComp = new double[width * height];
+
+    unsigned char* res = new unsigned char[width * height];
+
+    double* resF = new double[width * height];
+    for(int i=0; i < width * height; i++)
+    {
+        srcF[i] = (double)src[i];
+    }
+
+    getComp(srcF, realComp, imagComp, width, height);
+
+    double min = 100000000.0;
+    double max = -100000000.0;
+
+    for(int i=0; i < width * height; i++)
+    {
+        //std::cout << "i : " << i <<" ->"<< sqrt(realComp[i] * realComp[i] + imagComp[i] * imagComp[i]) << std::endl;
+        resF[i] = (double)sqrt(realComp[i] * realComp[i] + imagComp[i] * imagComp[i]);
+        //if (resF[i] < min)
+        //    min  = resF[i];
+        if (resF[i] > max)
+            max  = resF[i];
+    }
+
+    for(int i=0; i < width * height; i++)
+    {
+        resF[i] = 255.0* log10(resF[i] + 1.0)/log10(max + 1.0);
+    }
+    /*
+    for(int i=0; i < width * height; i++)
+    {
+        if (resF[i] < min)
+            min  = resF[i];
+        else if (resF[i] > max)
+            max  = resF[i];
+    }
+
+    for(int i=0; i < width * height; i++)
+    {
+        res[i] = 255.0 * (res[i] - min)/(max - min);
+    }
+    */
+   /*
+    double mean = 0.0;
+    for(int i=0; i < width * height; i++)
+    {
+        mean += res[i];
+    }
+
+    mean /= (width * height);
+
+    double stddev = 0.0;
+    for(int i=0; i < width * height; i++)
+    {
+        stddev += ((res[i] - mean) * (res[i] - mean));
+    }
+    stddev = sqrt(stddev);
+
+    for(int i=0; i < width * height; i++)
+    {
+        res[i] = (res[i] - mean)/stddev;
+    }
+
+    */
+    max = -100000000.0;
+    for(int i=0; i < width * height; i++)
+    {
+        if (resF[i] < min)
+        {
+            min = resF[i];
+        }
+        else if (resF[i] > max)
+        {
+            max = resF[i];
+        }
+    }
+    
+    for(int i=0; i < width * height; i++)
+    {
+        resF[i] = 255.0*(resF[i] - min)/(max - min);
+    }
+    
+    for(int i=0; i < width * height; i++)
+    {
+        resF[i] = 2 * resF[i] + 100;
+        if (resF[i] > 255)
+            resF[i] = 255;
+    }
+    
+
+    std::cout << "min : " << min << ", max = " << max << std::endl;
+    for(int i=0; i < width * height; i++)
+    {
+        res[i] = (unsigned char)resF[i];
+    }
+
+    free(srcF);
+    free(realComp);
+    free(imagComp);
+
+    return res;
+}
+/*
+* UTILS
+* =========================================================================
+*/
+
 double getResizeFactor(int width, int height)
 {
     double maxDim = (double)max(width,height);
@@ -411,4 +629,30 @@ void copy(unsigned char* src, unsigned char* dst, int size)
     {
         dst[i] = src[i];
     }
+}
+
+cv::Mat fftSwap(cv::Mat src, int cols, int rows)
+{
+
+    int mcols = (int)(cols/2);
+    int mrows = (int)(rows/2);
+    cv::Mat dst(cv::Size(cols, rows), CV_8U, cv::Scalar(0));
+    for(int i = 0; i < mrows; i++)
+    {
+        for(int j = 0; j < mcols; j++)
+        {
+            dst.at<uchar>(i+mrows,j+mcols) = src.at<uchar>(i,j);
+            dst.at<uchar>(i,j)             = src.at<uchar>(i+mrows,j+mcols);
+        }
+    }
+    for(int i = 0; i < mrows; i++)
+    {
+        for(int j = mcols; j < mcols + mcols; j++)
+        {
+            dst.at<uchar>(i+mrows,j-mcols) = src.at<uchar>(i,j);
+            dst.at<uchar>(i,j)             = src.at<uchar>(i+mrows,j-mcols);
+        }
+    }
+
+    return dst;
 }
