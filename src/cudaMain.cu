@@ -18,25 +18,9 @@ cv::Mat img_res;
 
 unsigned char* mdata;
 
-/*
-void Mat2Array(cv::Mat src, unsigned char* dst, int cols, int rows)
-{
-    int i, j;
-    for(i=0; i < rows; i++)
-    {
-        for(j=0; j < cols; j++)
-        {
-            dst[i * cols * 3 + j*3    ] = src.at<cv::Vec3b>(i,j)[0];
-            dst[i * cols * 3 + j*3 + 1] = src.at<cv::Vec3b>(i,j)[1];
-            dst[i * cols * 3 + j*3 + 2] = src.at<cv::Vec3b>(i,j)[2];
-        }
-    }
-    std::cout<<"end: "<< (i-1) * cols * 3 + (j-1)*3 + 2 << ", " << rows * cols * 3 << std::endl;
-}
-*/
 double getResizeFactor(int width, int height)
 {
-    double maxDim = (double)max(WIDTH,HEIGHT);
+    double maxDim = (double)max(width,height);
 
     double ftr = 480/maxDim;
     ftr = (ftr > 1) ? 1: ftr;
@@ -125,42 +109,126 @@ int cudaMain(int argc, char **argv)
     int prev_iter        = (int)iter;
     bool USE_MEAN_FILTER = false;
     bool USE_LAPLACIAN_FILTER = false;
+    bool USE_CHROMATIC = false;
+    bool USE_GRAY      = false;
     bool DONE            = true;
     
     cv::Mat IMAGE;
-    
+
+    char SET_CODE = (int)USE_MEAN_FILTER * 2 + 
+                    (int)USE_LAPLACIAN_FILTER * 4 +
+                    (int)USE_GRAY * 8 +
+                    (int)USE_CHROMATIC * 16;
+
+    //cv::Mat imgFFT(cv::Size(WIDTH, HEIGHT), CV_8UC3, dsttest);
+    //cv::imshow("FFT", imgFFT);
+    //cv::waitKey(0);
     unsigned char* toDisplay = new unsigned char[WIDTH * HEIGHT * 3];
 
     while (true)
     {
+        frame = cv::Scalar(38, 36, 26);     
         if (prev_iter != (int)iter)
             DONE = true;
-        frame = cv::Scalar(38, 36, 26);     
-        if (USE_MEAN_FILTER) {
-            if (DONE){
-                copy(mdata, toDisplay, WIDTH*HEIGHT*3);
-                for (int i = 0; i < (int)iter; i++)
-                    toDisplay = meanFilter(toDisplay, WIDTH, HEIGHT);
-                cv::Mat img(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
-                cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
-                DONE = false;
-                prev_iter = (int)iter;
-                std::cout << "Done!" << std::endl;
+        
+        switch (SET_CODE)
+        {
+            case 0: {
+                DONE = true;
+                IMAGE = img_res.clone();
+                break;
             }
-        } else {
-            DONE = true;
-            IMAGE = img_res.clone();
+            case 2: {
+                if (DONE){
+                    copy(mdata, toDisplay, WIDTH*HEIGHT*3);
+                    for (int i = 0; i < (int)iter; i++)
+                        toDisplay = meanFilter(toDisplay, WIDTH, HEIGHT);
+                    cv::Mat img(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
+                    cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+                    DONE = false;
+                    prev_iter = (int)iter;
+                    break;
+                }
+            }
+            case 4: {
+                if (DONE){
+                    copy(mdata, toDisplay, WIDTH*HEIGHT*3);
+                    toDisplay = laplacianFilter(toDisplay, WIDTH, HEIGHT);
+                    cv::Mat img(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
+                    cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+
+                    cvtColor(IMAGE, IMAGE, cv::COLOR_RGB2GRAY);
+                    cvtColor(IMAGE, IMAGE, cv::COLOR_GRAY2RGB);
+                    DONE = false;
+                    prev_iter = (int)iter;
+                    break;
+                }
+            }
+            case 8: {
+                if (DONE) {
+                    unsigned char* grayimg = toGray(mdata, WIDTH, HEIGHT);
+                    cv::Mat grayCV(cv::Size(WIDTH, HEIGHT), CV_8UC1, grayimg);
+
+                    cvtColor(grayCV, grayCV, cv::COLOR_GRAY2RGB);
+                    cv::resize(grayCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+
+                    DONE = false;
+                    prev_iter = (int)iter;
+                    break;
+                }
+            }
+            case 16: {
+                    if (DONE){
+                        unsigned char* chromimg = toChromatic(mdata, WIDTH, HEIGHT);
+                        cv::Mat chromCV(cv::Size(WIDTH, HEIGHT), CV_8UC3, chromimg);
+
+                        //cvtColor(grayCV, grayCV, cv::COLOR_GRAY2RGB);
+                        cv::resize(chromCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+
+                        DONE = false;
+                        prev_iter = (int)iter;
+                    break;
+                }
+            }
         }
+
         cvui::window(frame, 10, 10, 180, 480, "Settings");
-        cvui::checkbox(frame, 15, 35, "Mean Filter", &USE_MEAN_FILTER);
-        cvui::checkbox(frame, 15, 55, "Laplacian Filter", &USE_LAPLACIAN_FILTER);
-        cvui::trackbar(frame, 788, 600, 300, &iter, 0.0, 10.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS);
+        cvui::window(frame, 720 - (520-IMAGE.cols)/2, 50 - 40, 520, 560, "Picture");
+        
+        if (cvui::checkbox(frame, 15, 35, "Mean Filter", &USE_MEAN_FILTER)){
+            USE_LAPLACIAN_FILTER = false;
+            USE_CHROMATIC = false;
+            USE_GRAY = false;
+        } 
+        if (cvui::checkbox(frame, 15, 55, "Laplacian Filter", &USE_LAPLACIAN_FILTER)){
+            USE_MEAN_FILTER = false;
+            USE_CHROMATIC = false;
+            USE_GRAY = false;
+        }
+        if (cvui::checkbox(frame, 15, 75, "Gray Scale", &USE_GRAY)){
+            USE_MEAN_FILTER = false;
+            USE_LAPLACIAN_FILTER = false;
+            USE_CHROMATIC = false;
+        }
+        if (cvui::checkbox(frame, 15, 95, "Chromatic", &USE_CHROMATIC)){
+            USE_MEAN_FILTER = false;
+            USE_LAPLACIAN_FILTER = false;
+            USE_GRAY = false;
+        }
+
+        SET_CODE =  USE_MEAN_FILTER * 2 + 
+                    USE_LAPLACIAN_FILTER * 4 +
+                    USE_GRAY * 8 +
+                    USE_CHROMATIC * 16;
+        cvui::trackbar(frame, 808, 500, 300, &iter, 0.0, 20.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS); //"%1.Lf"
+        cvui::printf(frame, 730, 520, 0.4, 0xeeeeee, "Mean Filter");
+
         if(cvui::button(frame, 10, 680, "&Quit")){
             break;
         }
         cvui::update();
 
-        Mat2Mat(IMAGE, frame, 80, 640);
+        Mat2Mat(IMAGE, frame, 50, 720);
         
         cv::imshow(WINDOW_NAME, frame);
         char k = cv::waitKey(1);
@@ -169,6 +237,7 @@ int cudaMain(int argc, char **argv)
             std::cout << "[ESC] : break" << std::endl;
             break;
         }
+
     }  
     free(toDisplay);
     free(mdata);
