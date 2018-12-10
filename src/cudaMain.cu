@@ -18,6 +18,7 @@ cv::Mat img_res;
 
 unsigned char* mdata;
 
+/*
 double getResizeFactor(int width, int height)
 {
     double maxDim = (double)max(width,height);
@@ -46,6 +47,8 @@ void copy(unsigned char* src, unsigned char* dst, int size)
         dst[i] = src[i];
     }
 }
+
+*/
 int cudaMain(int argc, char **argv)
 {
     std::string X;
@@ -109,20 +112,17 @@ int cudaMain(int argc, char **argv)
     int prev_iter        = (int)iter;
     bool USE_MEAN_FILTER = false;
     bool USE_LAPLACIAN_FILTER = false;
-    bool USE_CHROMATIC = false;
-    bool USE_GRAY      = false;
-    bool DONE            = true;
+    bool USE_CHROMATIC        = false;
+    bool USE_GRAY             = false;
+    bool DONE                 = true;
     
     cv::Mat IMAGE;
 
-    char SET_CODE = (int)USE_MEAN_FILTER * 2 + 
-                    (int)USE_LAPLACIAN_FILTER * 4 +
-                    (int)USE_GRAY * 8 +
-                    (int)USE_CHROMATIC * 16;
+    char SET_CODE = USE_MEAN_FILTER * 2 + 
+                    USE_LAPLACIAN_FILTER * 4 +
+                    USE_GRAY * 8 +
+                    USE_CHROMATIC * 16;
 
-    //cv::Mat imgFFT(cv::Size(WIDTH, HEIGHT), CV_8UC3, dsttest);
-    //cv::imshow("FFT", imgFFT);
-    //cv::waitKey(0);
     unsigned char* toDisplay = new unsigned char[WIDTH * HEIGHT * 3];
 
     while (true)
@@ -160,7 +160,6 @@ int cudaMain(int argc, char **argv)
                     cvtColor(IMAGE, IMAGE, cv::COLOR_RGB2GRAY);
                     cvtColor(IMAGE, IMAGE, cv::COLOR_GRAY2RGB);
                     DONE = false;
-                    prev_iter = (int)iter;
                     break;
                 }
             }
@@ -168,12 +167,10 @@ int cudaMain(int argc, char **argv)
                 if (DONE) {
                     unsigned char* grayimg = toGray(mdata, WIDTH, HEIGHT);
                     cv::Mat grayCV(cv::Size(WIDTH, HEIGHT), CV_8UC1, grayimg);
-
                     cvtColor(grayCV, grayCV, cv::COLOR_GRAY2RGB);
                     cv::resize(grayCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
 
                     DONE = false;
-                    prev_iter = (int)iter;
                     break;
                 }
             }
@@ -181,12 +178,9 @@ int cudaMain(int argc, char **argv)
                     if (DONE){
                         unsigned char* chromimg = toChromatic(mdata, WIDTH, HEIGHT);
                         cv::Mat chromCV(cv::Size(WIDTH, HEIGHT), CV_8UC3, chromimg);
-
-                        //cvtColor(grayCV, grayCV, cv::COLOR_GRAY2RGB);
                         cv::resize(chromCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
 
                         DONE = false;
-                        prev_iter = (int)iter;
                     break;
                 }
             }

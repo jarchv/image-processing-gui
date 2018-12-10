@@ -381,3 +381,34 @@ unsigned char* toChromatic(unsigned char* src, int width, int height)
     }
     return res;
 }
+
+
+// UTILS
+double getResizeFactor(int width, int height)
+{
+    double maxDim = (double)max(width,height);
+
+    double ftr = 480/maxDim;
+    ftr = (ftr > 1) ? 1: ftr;
+    
+    return ftr;
+}
+
+void Mat2Mat(cv::Mat& src, cv::Mat& dst, int x0, int y0)
+{
+    for(int i = x0; i < x0 + src.rows; i++)
+    {
+        for(int j = y0; j < y0 + src.cols; j++)
+        {
+            dst.at<cv::Vec3b>(i, j) = src.at<cv::Vec3b>(i-x0, j-y0);
+        }
+    }
+}
+
+void copy(unsigned char* src, unsigned char* dst, int size)
+{
+    for(int i = 0; i < size; i++)
+    {
+        dst[i] = src[i];
+    }
+}

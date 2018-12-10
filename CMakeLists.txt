@@ -3,15 +3,15 @@ project(imgpro LANGUAGES CXX CUDA)
 project(cuda_base CXX CUDA)
 
 find_package(OpenCV REQUIRED )
-#find_package(CUDA REQUIRED)
-#include_directories( ${OpenCV_INCLUDE_DIRS} )
-#include_directories(include ${CUDA_INCLUDE_DIRS})
-include_directories(include)
-#find_package(wxWidgets REQUIRED COMPONENTS net core base)
 
-#include(${wxWidgets_USE_FILE})
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+include_directories(include)
+
+
 include(CTest)
+#include(${wxWidgets_USE_FILE})
 #include(FindCUDA)
+
 add_library(cuda_base 
     src/cudaHeaders.h
     src/cudaMain.h
@@ -28,7 +28,6 @@ set_target_properties( cuda_base
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode arch=compute_50,code=sm_50")
 
-#LIST(APPEND CUDA_NVCC_FLAGS ${CMAKE_CUDA_FLAGS} -lcufft -gencode arch=compute_20,code=sm_20)
 if(BUILD_TESTING)
 
   add_executable(imgpro src/main.cpp)

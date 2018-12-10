@@ -1,6 +1,8 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 
+#include "cudaMain.h"
+
 unsigned char* readBMPFile(
     char const*  filename,
     int& width,
@@ -22,7 +24,12 @@ unsigned char * FilterOp(
     int width,
     float* kernel);
 
-float * getSumRGB(unsigned char* src, int width, int height);
-unsigned char* toGray(unsigned char* src, int with, int height);
-unsigned char* toChromatic(unsigned char* src, int width, int height);
+float*          getSumRGB(unsigned char* src, int width, int height);
+unsigned char*  toGray(unsigned char* src, int with, int height);
+unsigned char*  toChromatic(unsigned char* src, int width, int height);
+
+double          getResizeFactor(int width, int height);
+void            Mat2Mat(cv::Mat& src, cv::Mat& dst, int x0, int y0);
+void            copy(unsigned char* src, unsigned char* dst, int size);
+
 #endif
