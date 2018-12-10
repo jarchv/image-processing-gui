@@ -523,42 +523,7 @@ unsigned char* FFT(unsigned char* src, int width, int height)
     {
         resF[i] = 255.0* log10(resF[i] + 1.0)/log10(max + 1.0);
     }
-    /*
-    for(int i=0; i < width * height; i++)
-    {
-        if (resF[i] < min)
-            min  = resF[i];
-        else if (resF[i] > max)
-            max  = resF[i];
-    }
 
-    for(int i=0; i < width * height; i++)
-    {
-        res[i] = 255.0 * (res[i] - min)/(max - min);
-    }
-    */
-   /*
-    double mean = 0.0;
-    for(int i=0; i < width * height; i++)
-    {
-        mean += res[i];
-    }
-
-    mean /= (width * height);
-
-    double stddev = 0.0;
-    for(int i=0; i < width * height; i++)
-    {
-        stddev += ((res[i] - mean) * (res[i] - mean));
-    }
-    stddev = sqrt(stddev);
-
-    for(int i=0; i < width * height; i++)
-    {
-        res[i] = (res[i] - mean)/stddev;
-    }
-
-    */
     max = -100000000.0;
     for(int i=0; i < width * height; i++)
     {
@@ -577,15 +542,6 @@ unsigned char* FFT(unsigned char* src, int width, int height)
         resF[i] = 255.0*(resF[i] - min)/(max - min);
     }
     
-    for(int i=0; i < width * height; i++)
-    {
-        resF[i] = 2 * resF[i] + 100;
-        if (resF[i] > 255)
-            resF[i] = 255;
-    }
-    
-
-    std::cout << "min : " << min << ", max = " << max << std::endl;
     for(int i=0; i < width * height; i++)
     {
         res[i] = (unsigned char)resF[i];
@@ -655,4 +611,30 @@ cv::Mat fftSwap(cv::Mat src, int cols, int rows)
     }
 
     return dst;
+}
+
+
+unsigned char* BC(unsigned char* src, float B, float C, int size)
+{
+    float* srcF        = new float[size];
+    unsigned char* res = new unsigned char[size];
+
+    for(int i=0; i < size; i++)
+    {
+        srcF[i] = (float)src[i];
+    }
+
+    for(int i=0; i < size; i++)
+    {
+        srcF[i] = C * srcF[i] + B;
+        if (srcF[i] > 255)
+            srcF[i] = 255;
+    }  
+
+    for(int i=0; i < size; i++)
+    {
+        res[i] = (unsigned char)srcF[i];
+    }
+
+    return res;
 }

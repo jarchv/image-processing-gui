@@ -85,15 +85,24 @@ int cudaMain(int argc, char **argv)
         if (prev_iter != (int)iter)
             DONE = true;
         
+        if (prev_brig != brig)
+            DONE = true;
+
+        if (prev_cont != cont)
+            DONE = true; 
+
         switch (SET_CODE)
         {
             case 0: {
-                DONE = true;
-                IMAGE = img_res.clone();
+                cv::Mat img(cv::Size(WIDTH, HEIGHT), CV_8UC3, mdata);
+                cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+                DONE = true;       
                 break;
             }
             case 2: {
+                std::cout <<  DONE << std::endl;
                 if (DONE){
+
                     copy(mdata, toDisplay, WIDTH*HEIGHT*3);
                     for (int i = 0; i < (int)iter; i++)
                         toDisplay = meanFilter(toDisplay, WIDTH, HEIGHT);
@@ -106,6 +115,7 @@ int cudaMain(int argc, char **argv)
             }
             case 4: {
                 if (DONE){
+                    
                     copy(mdata, toDisplay, WIDTH*HEIGHT*3);
                     toDisplay = laplacianFilter(toDisplay, WIDTH, HEIGHT);
                     cv::Mat img(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
@@ -132,22 +142,31 @@ int cudaMain(int argc, char **argv)
                     chromimg = toChromatic(mdata, WIDTH, HEIGHT);
                     cv::Mat chromCV(cv::Size(WIDTH, HEIGHT), CV_8UC3, chromimg);
                     cv::resize(chromCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
-                    DONE = false;    
+                    DONE = false;
+                    prev_brig = brig;
+                    prev_cont = cont;   
                 }
                 break;
             }
             case 32: {
                 if (DONE){
                     grayimg = toGray(mdata, WIDTH, HEIGHT);
-                    img2fft = FFT(grayimg, WIDTH, HEIGHT); 
-                    cv::Mat grayCV(cv::Size(WIDTH, HEIGHT), CV_8U, img2fft);
+                    img2fft = FFT(grayimg, WIDTH, HEIGHT);
+                    imgBC   = BC(img2fft, (float)brig, cont, WIDTH * HEIGHT);
+
+                    cv::Mat grayCV(cv::Size(WIDTH, HEIGHT), CV_8U, imgBC);
 
                     cv::Mat swapGray = fftSwap(grayCV, WIDTH, HEIGHT);
                     cvtColor(swapGray, swapGray, cv::COLOR_GRAY2RGB);
                     cv::resize(swapGray, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
-                    DONE = false; 
+                    prev_brig = brig;
+                    prev_cont = cont; 
+                    DONE = false;
                 }
                 break;
+            }
+            default:{
+                DONE = true;
             }
         }
 
@@ -193,9 +212,14 @@ int cudaMain(int argc, char **argv)
                     USE_CHROMATIC        * 16 +
                     USE_FFT * 32;
 
+        cvui::trackbar(frame, 828, 420, 300, &brig,   0,  255,   1, "",cvui::TRACKBAR_HIDE_LABELS);
+        cvui::trackbar(frame, 828, 460, 300, &cont, 0.1, 10.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS);
         cvui::trackbar(frame, 828, 500, 300, &iter, 0.0, 20.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS); //"%1.Lf"
-        cvui::printf(frame, 760, 520, 0.4, 0xeeeeee, "Mean Filter");
 
+        cvui::printf(frame, 760, 440, 0.4, 0xeeeeee, "Brightness");
+        cvui::printf(frame, 760, 480, 0.4, 0xeeeeee, "Contrast");
+        cvui::printf(frame, 760, 520, 0.4, 0xeeeeee, "Mean Filter");
+        
         if(cvui::button(frame, 10, 680, "&Quit")){
             break;
         }

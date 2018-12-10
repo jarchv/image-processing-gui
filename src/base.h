@@ -7,6 +7,10 @@ int HEIGHT = 0;
 unsigned char* mdata;
 const char* filename;
 double iter               = 1;
+int   brig                = 80;
+int   prev_brig           = brig;
+double cont               = 2.0;
+double prev_cont          = cont;    
 int prev_iter             = (int)iter;
 bool USE_MEAN_FILTER      = false;
 bool USE_LAPLACIAN_FILTER = false;
@@ -29,6 +33,7 @@ unsigned char* toDisplay;
 unsigned char* grayimg;
 unsigned char* chromimg;
 unsigned char* img2fft;
+unsigned char *imgBC;
 
 char k;
 #endif
