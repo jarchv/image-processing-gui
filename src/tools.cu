@@ -6,7 +6,7 @@
 #include "cudaHeaders.h"
 #include "tools.h"
 
-# define M_PI 3.14159265358979323846 
+# define M_PI 3.14159265358979323846
 //float M_PI = 3.1416;
 
 __global__ void FilterOp_gpu(unsigned char* dev_src, unsigned char* dev_res, int rows, int cols, float* dev_kernel)
@@ -17,9 +17,11 @@ __global__ void FilterOp_gpu(unsigned char* dev_src, unsigned char* dev_res, int
     int lim_inf = 0;
     long lim_sup = rows * cols;
 
-    if ((x < rows) & (y < cols))
+    //printf("dimX : %d, dimY: %d\n",gridDim.x*blockDim.x, gridDim.y*blockDim.y);
+
+    if ((x < cols) & (y < rows))
     {
-        long pos = x * cols + y;
+        long pos = y * cols + x;
         float tmp = (float)dev_src[pos]*dev_kernel[4];
 
         /*
@@ -37,45 +39,48 @@ __global__ void FilterOp_gpu(unsigned char* dev_src, unsigned char* dev_res, int
         else
             tmp += ((float)dev_src[pos]*dev_kernel[5]);
 
-        if (pos - cols - cols/3  > lim_inf)
-            tmp += ((float)dev_src[pos - cols - cols/3]*dev_kernel[1]);
+        
+        if (pos - cols  > lim_inf)
+            tmp += ((float)dev_src[pos - cols]*dev_kernel[1]);
         else
             tmp += ((float)dev_src[pos]*dev_kernel[1]);
 
-        if (pos + cols + cols/3  < lim_sup)
-            tmp += ((float)dev_src[pos + cols + cols/3]*dev_kernel[7]);
+        if (pos + cols < lim_sup)
+            tmp += ((float)dev_src[pos + cols]*dev_kernel[7]);
         else
             tmp += ((float)dev_src[pos]*dev_kernel[7]);
-
+        
         
         /*
         * Esquinas
         * ========
         */
+
         
-        if (pos - cols - cols/3 - 3 > lim_inf)
-            tmp += ((float)dev_src[pos - cols - cols/3 - 3]*dev_kernel[0]);
+        
+        if (pos - cols - 3 > lim_inf)
+            tmp += ((float)dev_src[pos - cols - 3]*dev_kernel[0]);
         else
             tmp += ((float)dev_src[pos]*dev_kernel[0]);
 
-        if (pos - cols - cols/3 + 3 > lim_inf)
-            tmp += ((float)dev_src[pos - cols - cols/3 + 3]*dev_kernel[2]);
+        if (pos - cols + 3 > lim_inf)
+            tmp += ((float)dev_src[pos - cols + 3]*dev_kernel[2]);
         else
             tmp += ((float)dev_src[pos]*dev_kernel[2]);
 
-        if (pos + cols + cols/3 - 3 < lim_sup)
-            tmp += ((float)dev_src[pos + cols + cols/3 - 3]*dev_kernel[6]);
+        if (pos + cols - 3 < lim_sup)
+            tmp += ((float)dev_src[pos + cols - 3]*dev_kernel[6]);
         else
             tmp += ((float)dev_src[pos]*dev_kernel[6]);           
-        if (pos + cols + cols/3 + 3 < lim_sup)
-            tmp += ((float)dev_src[pos + cols + cols/3 + 3]*dev_kernel[8]);
+        if (pos + cols + 3 < lim_sup)
+            tmp += ((float)dev_src[pos + cols + 3]*dev_kernel[8]);
         else
             tmp += ((float)dev_src[pos]*dev_kernel[8]);   
         
         dev_res[pos] = (unsigned char)tmp; 
     }
 }
-unsigned char * FilterOp(unsigned char* data,  int height, int width, float* kernel)
+unsigned char * FilterOp(unsigned char* data,  int width, int height, float* kernel)
 {
     
     unsigned char *dev_data;
@@ -96,10 +101,10 @@ unsigned char * FilterOp(unsigned char* data,  int height, int width, float* ker
     int DIM1 = height;
     int DIM2 = width * 3;
 
-    dim3 grids(DIM1/16 + 1, DIM2/16 + 1);
+    dim3 blocks(DIM2/16 + 1, DIM1/16 + 1);
     dim3 threads(16,16);
 
-    FilterOp_gpu<<<grids, threads>>>(dev_data, dev_res, DIM1, DIM2, dev_kernel);
+    FilterOp_gpu<<<blocks, threads>>>(dev_data, dev_res, DIM1, DIM2, dev_kernel);
 
     cudaMemcpy(data, dev_data, sizeImg * sizeof(unsigned char),cudaMemcpyDeviceToHost);
     cudaMemcpy(res , dev_res , sizeImg * sizeof(unsigned char),cudaMemcpyDeviceToHost);
@@ -112,7 +117,7 @@ unsigned char * FilterOp(unsigned char* data,  int height, int width, float* ker
 
 }
 
-unsigned char *meanFilter(unsigned char* data, int height, int width)
+unsigned char *meanFilter(unsigned char* data, int width, int height)
 {
     unsigned char* res;
     float *kernel = new float[9];
@@ -128,11 +133,11 @@ unsigned char *meanFilter(unsigned char* data, int height, int width)
     kernel[7] = 1.0/9.0;
     kernel[8] = 1.0/9.0;
 
-    res = FilterOp(data , height, width, kernel);
+    res = FilterOp(data , width, height, kernel);
     return res;
 }
 
-unsigned char *laplacianFilter(unsigned char* data, int height, int width)
+unsigned char *laplacianFilter(unsigned char* data, int width, int height)
 {
     unsigned char* res;
     float *kernel = new float[9];
@@ -148,7 +153,7 @@ unsigned char *laplacianFilter(unsigned char* data, int height, int width)
     kernel[7] = -1.0;
     kernel[8] =  0.0;
 
-    res = FilterOp(data , height, width, kernel);
+    res = FilterOp(data , width, height, kernel);
     return res;
 }
 
@@ -164,9 +169,10 @@ __global__ void swapPixels(unsigned char* dev_src, unsigned char* dev_res, int r
 
 unsigned char* readBMPFile( char const*  filename,
     int& width,
-    int& height)
+    int& height,
+    int& depth)
 {
-    int depth;
+
     FILE* f = fopen(filename, "rb");
     if (f == NULL)
         return NULL;
@@ -647,25 +653,19 @@ unsigned char* BC(unsigned char* src, float B, float C, int size)
     return res;
 }
 
-cv::Mat TemplateMatching()
+cv::Mat TemplateMatching(cv::Mat img,cv::Mat& img_display, cv::Mat templ)
 {
-    cv::Mat img; 
-    cv::Mat templ; 
+
     cv::Mat result;
-
-    img   = cv::imread("../files/demo.png");
-    templ = cv::imread("../files/temp.png");
-
-    cv::Mat img_display;
     img.copyTo( img_display );
-
+    
     int result_cols = img.cols - templ.cols + 1;
     int result_rows = img.rows - templ.rows + 1;
 
     result.create( result_rows, result_cols, CV_32FC1 );
 
-    cv::matchTemplate( img, templ, result, 1);
-    cv::normalize( result, result, 0, 1, cv::NORM_MINMAX, -1, cv::Mat() );
+    cv::matchTemplate(img, templ, result, 1);
+    cv::normalize(result, result, 0, 1, cv::NORM_MINMAX, -1, cv::Mat() );
 
     double minVal; 
     double maxVal; 
@@ -674,11 +674,25 @@ cv::Mat TemplateMatching()
     cv::Point maxLoc;
     cv::Point matchLoc;
 
-    cv::minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat() );
-
+    cv::minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat());
     matchLoc = minLoc;
-    cv::rectangle( img_display, matchLoc, cv::Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), cv::Scalar::all(0), 2, 8, 0 );
-    cv::rectangle( result, matchLoc, cv::Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), cv::Scalar::all(0), 2, 8, 0 );
+    cv::rectangle( img_display, matchLoc, cv::Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), cv::Scalar(255,255,0), 6, 8, 0 );
+    cv::rectangle( result, matchLoc, cv::Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), cv::Scalar(0,0,0), 10, 8, 0 );
 
-    return img_display;
+    return result;
+}
+
+unsigned char *toArray(cv::Mat src)
+{
+    unsigned char* dst = new unsigned char[src.rows*src.cols*3];
+    for (int i = 0; i < src.rows; i++)
+    {
+        for (int j = 0; j < src.cols; j++)
+        {
+            dst[i*src.cols*3 + 3*j+0] = src.at<cv::Vec3b>(i, j)[2];
+            dst[i*src.cols*3 + 3*j+1] = src.at<cv::Vec3b>(i, j)[1];
+            dst[i*src.cols*3 + 3*j+2] = src.at<cv::Vec3b>(i, j)[0];
+        }
+    }
+    return dst;
 }

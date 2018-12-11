@@ -3,7 +3,7 @@
 
 int WIDTH  = 0;
 int HEIGHT = 0;
-
+int DEPTH  = 24;
 
 const char* filename;
 double iter               = 1;
