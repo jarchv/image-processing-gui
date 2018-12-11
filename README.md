@@ -5,12 +5,15 @@ Graphic interface for image processing:
 2. Filters:
     - Mean Filter
     - Laplacian Filter
+3. Gray Scale
+4. Chromatic Coordinates
+5. Fourier Transformation
+6. Template Matching
 ```
 mkdir build
 cd build
 cmake ..
 make
-./imgpro files/LAND.BMP
 ```
 
 ### Instructions:
@@ -23,4 +26,8 @@ make
 2. Open a BMP image.
 ```
 ./imgpro files/1BIT.BMP # 4BITS.BMP, 8BITS.BMP, 24BITS.BMP
+```
+2. Open an image(PNG, JPG, ...).
+```
+./imgpro -t files/PNG.png
 ```
