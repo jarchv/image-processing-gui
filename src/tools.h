@@ -36,5 +36,5 @@ cv::Mat         fftSwap(cv::Mat src, int cols, int rows);
 unsigned char* FFT(unsigned char* src, int width, int height);
 void getComp(float* data, float* res1, float* res2, int width, int height);
 unsigned char* BC(unsigned char* src, float B, float C, int size);
-
+cv::Mat TemplateMatching();
 #endif

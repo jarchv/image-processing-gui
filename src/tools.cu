@@ -392,8 +392,6 @@ __global__ void getP(double* dev_data, double* dev_P_real, double* dev_P_imag, i
     int x       = threadIdx.x + blockIdx.x * blockDim.x;
     int y       = threadIdx.y + blockIdx.y * blockDim.y;
 
-    int pitch = blockDim.x * gridDim.x;
-
     if ((x < cols) & (y < rows))
     {
         double tempReal1 = 0.0;
@@ -647,4 +645,40 @@ unsigned char* BC(unsigned char* src, float B, float C, int size)
     free(srcF);
 
     return res;
+}
+
+cv::Mat TemplateMatching()
+{
+    cv::Mat img; 
+    cv::Mat templ; 
+    cv::Mat result;
+
+    img   = cv::imread("../files/demo.png");
+    templ = cv::imread("../files/temp.png");
+
+    cv::Mat img_display;
+    img.copyTo( img_display );
+
+    int result_cols = img.cols - templ.cols + 1;
+    int result_rows = img.rows - templ.rows + 1;
+
+    result.create( result_rows, result_cols, CV_32FC1 );
+
+    cv::matchTemplate( img, templ, result, 1);
+    cv::normalize( result, result, 0, 1, cv::NORM_MINMAX, -1, cv::Mat() );
+
+    double minVal; 
+    double maxVal; 
+    
+    cv::Point minLoc; 
+    cv::Point maxLoc;
+    cv::Point matchLoc;
+
+    cv::minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat() );
+
+    matchLoc = minLoc;
+    cv::rectangle( img_display, matchLoc, cv::Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), cv::Scalar::all(0), 2, 8, 0 );
+    cv::rectangle( result, matchLoc, cv::Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), cv::Scalar::all(0), 2, 8, 0 );
+
+    return img_display;
 }

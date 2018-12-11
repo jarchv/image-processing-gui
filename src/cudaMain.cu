@@ -95,19 +95,24 @@ int cudaMain(int argc, char **argv)
         {
             case 0: {
                 cv::Mat img(cv::Size(WIDTH, HEIGHT), CV_8UC3, mdata);
-                cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+                if (max(img.cols, img.rows) > MAX_DIM)
+                    cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+                else
+                    img.copyTo(IMAGE);
                 DONE = true;       
                 break;
             }
             case 2: {
-                std::cout <<  DONE << std::endl;
                 if (DONE){
 
                     copy(mdata, toDisplay, WIDTH*HEIGHT*3);
                     for (int i = 0; i < (int)iter; i++)
                         toDisplay = meanFilter(toDisplay, WIDTH, HEIGHT);
                     cv::Mat img(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
-                    cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+                    if (max(img.cols, img.rows) > MAX_DIM)
+                        cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+                    else
+                        img.copyTo(IMAGE);
                     DONE = false;
                     prev_iter = (int)iter;
                 }
@@ -119,7 +124,10 @@ int cudaMain(int argc, char **argv)
                     copy(mdata, toDisplay, WIDTH*HEIGHT*3);
                     toDisplay = laplacianFilter(toDisplay, WIDTH, HEIGHT);
                     cv::Mat img(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
-                    cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+                    if (max(img.cols, img.rows) > MAX_DIM)
+                        cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+                    else
+                        img.copyTo(IMAGE);
 
                     cvtColor(IMAGE, IMAGE, cv::COLOR_RGB2GRAY);
                     cvtColor(IMAGE, IMAGE, cv::COLOR_GRAY2RGB);
@@ -132,7 +140,10 @@ int cudaMain(int argc, char **argv)
                     grayimg = toGray(mdata, WIDTH, HEIGHT);
                     cv::Mat grayCV(cv::Size(WIDTH, HEIGHT), CV_8UC1, grayimg);
                     cvtColor(grayCV, grayCV, cv::COLOR_GRAY2RGB);
-                    cv::resize(grayCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+                    if (max(grayCV.cols, grayCV.rows) > MAX_DIM)
+                        cv::resize(grayCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+                    else
+                        grayCV.copyTo(IMAGE);
                     DONE = false; 
                 }
                 break;
@@ -141,7 +152,10 @@ int cudaMain(int argc, char **argv)
                 if (DONE){
                     chromimg = toChromatic(mdata, WIDTH, HEIGHT);
                     cv::Mat chromCV(cv::Size(WIDTH, HEIGHT), CV_8UC3, chromimg);
-                    cv::resize(chromCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC );
+                    if (max(chromCV.cols, chromCV.rows) > MAX_DIM)
+                        cv::resize(chromCV, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+                    else
+                        chromCV.copyTo(IMAGE);
                     DONE = false;
                     prev_brig = brig;
                     prev_cont = cont;   
@@ -158,9 +172,25 @@ int cudaMain(int argc, char **argv)
 
                     cv::Mat swapGray = fftSwap(grayCV, WIDTH, HEIGHT);
                     cvtColor(swapGray, swapGray, cv::COLOR_GRAY2RGB);
-                    cv::resize(swapGray, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+
+                    if (max(swapGray.cols, swapGray.rows) > MAX_DIM)
+                        cv::resize(swapGray, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+                    else
+                        swapGray.copyTo(IMAGE);
                     prev_brig = brig;
                     prev_cont = cont; 
+                    DONE = false;
+                }
+                break;
+            }
+
+            case 64: {
+                if (DONE){
+                    cv::Mat trackImg = TemplateMatching();
+                    if (max(trackImg.cols, trackImg.rows) > MAX_DIM)
+                        cv::resize(trackImg, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+                    else
+                        trackImg.copyTo(IMAGE);
                     DONE = false;
                 }
                 break;
@@ -178,18 +208,21 @@ int cudaMain(int argc, char **argv)
             USE_CHROMATIC = false;
             USE_GRAY = false;
             USE_FFT  = false;
+            USE_TEMPLATE = false;
         } 
         if (cvui::checkbox(frame, 15, 55, "Laplacian Filter", &USE_LAPLACIAN_FILTER)){
             USE_MEAN_FILTER = false;
             USE_CHROMATIC = false;
             USE_GRAY = false;
             USE_FFT  = false;
+            USE_TEMPLATE = false;
         }
         if (cvui::checkbox(frame, 15, 75, "Gray Scale", &USE_GRAY)){
             USE_MEAN_FILTER = false;
             USE_LAPLACIAN_FILTER = false;
             USE_CHROMATIC = false;
             USE_FFT  = false;
+            USE_TEMPLATE = false;
         }
 
         if (cvui::checkbox(frame, 15, 95, "Chromatic", &USE_CHROMATIC)){
@@ -197,20 +230,31 @@ int cudaMain(int argc, char **argv)
             USE_LAPLACIAN_FILTER = false;
             USE_GRAY = false;
             USE_FFT  = false;
+            USE_TEMPLATE = false;
         }
 
-        if (cvui::checkbox(frame, 15, 115, "FFT", &USE_FFT)){
+        if (cvui::checkbox(frame, 15, 115, "Fourier", &USE_FFT)){
             USE_MEAN_FILTER = false;
             USE_LAPLACIAN_FILTER = false;
             USE_GRAY = false;
             USE_CHROMATIC = false;
+            USE_TEMPLATE = false;
         }
 
-        SET_CODE =  USE_MEAN_FILTER      * 2 + 
-                    USE_LAPLACIAN_FILTER * 4 +
-                    USE_GRAY             * 8 +
+        if (cvui::checkbox(frame, 15, 135, "Template Matching   ", &USE_TEMPLATE)){
+            USE_MEAN_FILTER = false;
+            USE_LAPLACIAN_FILTER = false;
+            USE_GRAY = false;
+            USE_CHROMATIC = false;
+            USE_FFT = false;
+        }
+
+        SET_CODE =  USE_MEAN_FILTER      *  2 + 
+                    USE_LAPLACIAN_FILTER *  4 +
+                    USE_GRAY             *  8 +
                     USE_CHROMATIC        * 16 +
-                    USE_FFT * 32;
+                    USE_FFT              * 32 +
+                    USE_TEMPLATE         * 64;
 
         cvui::trackbar(frame, 828, 550, 300, &brig,   0,  255,   1, "",cvui::TRACKBAR_HIDE_LABELS);
         cvui::trackbar(frame, 828, 585, 300, &cont, 0.1, 100.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS);
