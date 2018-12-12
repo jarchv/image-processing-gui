@@ -37,6 +37,7 @@ make
 4. Transformationces Geometricas:
     - Transformaciones bilineales.
 5. Espacios de color y dominio de frecuencia:
+    - Escala de grises.
     - Coordenas cromáticas.
     - Transformada de Fourier
     - Transformada inversa de Fourier
