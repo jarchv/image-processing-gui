@@ -24,6 +24,8 @@ cv::Mat trackResul;
 cv::Mat TRACK;
 cv::Mat RESULT;
 cv::Mat frameCap;
+cv::Mat inputbox;
+cv::Mat imgFrame;
 
 int cudaMain(int argc, char **argv)
 {
@@ -47,7 +49,7 @@ int cudaMain(int argc, char **argv)
             if (argv[1][1] == 't')
             {
                 X = argv[2];
-                X = "../" + X; 
+                X = "../files/" + X; 
                 
                 filename = X.c_str();
                 std::cout<<"\nFILE: "<<X<<"\n"<<std::endl;
@@ -63,7 +65,7 @@ int cudaMain(int argc, char **argv)
         }
         else {
             X = argv[1];
-            X = "../" + X; 
+            X = "../files/" + X; 
             
             filename = X.c_str();        
             std::cout<<"\nFILE: "<<X<<"\n"<<std::endl;
@@ -83,7 +85,8 @@ int cudaMain(int argc, char **argv)
     cv::namedWindow(WINDOW_NAME);
     
 
-    factor = getResizeFactor(WIDTH, HEIGHT);
+    factor = getResizeFactor(WIDTH, HEIGHT, 480);
+
 
     cv::resize(img, img_res, cv::Size(), factor, factor, cv::INTER_LINEAR );
     cvui::init(WINDOW_NAME);
@@ -94,9 +97,10 @@ int cudaMain(int argc, char **argv)
     {
         frame = cv::Scalar(38, 36, 26);     
         cvui::window(frame,  10, 10, 260, 280, "Settings");
-        cvui::window(frame, 720, 10, 520, 680, "Picture");
+        cvui::window(frame, 720, 10, 520, 680, "Result");
         cvui::window(frame, 620, 10,  80, 100, "Template");
-
+        cvui::window(frame, 400, 370,  300, 320, "Input");
+        
         if (prev_iter != (int)iter)
             DONE = true;
         
@@ -109,11 +113,6 @@ int cudaMain(int argc, char **argv)
         switch (SET_CODE)
         {
             case 0: {
-                //img = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, mdata);
-                //if (max(img.cols, img.rows) > MAX_DIM)
-                //    cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
-                //else
-                    
                 img_res.copyTo(IMAGE);
                 DONE = true;       
                 break;
@@ -124,11 +123,11 @@ int cudaMain(int argc, char **argv)
                     copy(mdata, toDisplay, WIDTH*HEIGHT*3);
                     for (int i = 0; i < (int)iter; i++)
                         toDisplay = meanFilter(toDisplay, WIDTH, HEIGHT);
-                    img = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
-                    if (max(img.cols, img.rows) > MAX_DIM)
-                        cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+                    imgFrame = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
+                    if (max(imgFrame.cols, imgFrame.rows) > MAX_DIM)
+                        cv::resize(imgFrame, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
                     else
-                        img.copyTo(IMAGE);
+                        imgFrame.copyTo(IMAGE);
                     DONE = false;
                     prev_iter = (int)iter;
                 }
@@ -139,11 +138,11 @@ int cudaMain(int argc, char **argv)
                     
                     copy(mdata, toDisplay, WIDTH*HEIGHT*3);
                     toDisplay = laplacianFilter(toDisplay, WIDTH, HEIGHT);
-                    img = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
-                    if (max(img.cols, img.rows) > MAX_DIM)
-                        cv::resize(img, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+                    imgFrame = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
+                    if (max(imgFrame.cols, imgFrame.rows) > MAX_DIM)
+                        cv::resize(imgFrame, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
                     else
-                        img.copyTo(IMAGE);
+                        imgFrame.copyTo(IMAGE);
 
                     cvtColor(IMAGE, IMAGE, cv::COLOR_RGB2GRAY);
                     cvtColor(IMAGE, IMAGE, cv::COLOR_GRAY2RGB);
@@ -215,7 +214,7 @@ int cudaMain(int argc, char **argv)
 
                     else {
                         cap >> frameCap;
-                        factor = getResizeFactor(frameCap.cols, frameCap.rows);
+                        factor = getResizeFactor(frameCap.cols, frameCap.rows, 480);
 
                         int count = 0;
                         for(;;)
@@ -262,7 +261,7 @@ int cudaMain(int argc, char **argv)
 
                     DONE = false;
                 }
-                factor = getResizeFactor(img.cols, img.rows);
+                factor = getResizeFactor(img.cols, img.rows, 480);
                 cvui::checkbox(frame, 15, 135, "Template Matching   ", &USE_TEMPLATE);
                 break;
             }
@@ -275,21 +274,25 @@ int cudaMain(int argc, char **argv)
 
         Mat2Mat(templ_res, frame, 40, 630);
 
-        if (cvui::checkbox(frame, 15, 35, "Mean Filter", &USE_MEAN_FILTER)){
+        cvui::printf(frame,  20, 45, 0.4, 0xeeeeee, "Filters");
+
+        if (cvui::checkbox(frame, 30, 65, "Mean Filter", &USE_MEAN_FILTER)){
             USE_LAPLACIAN_FILTER = false;
             USE_CHROMATIC = false;
             USE_GRAY = false;
             USE_FFT  = false;
             USE_TEMPLATE = false;
         } 
-        if (cvui::checkbox(frame, 15, 55, "Laplacian Filter", &USE_LAPLACIAN_FILTER)){
+        if (cvui::checkbox(frame, 30, 85, "Laplacian Filter", &USE_LAPLACIAN_FILTER)){
             USE_MEAN_FILTER = false;
             USE_CHROMATIC = false;
             USE_GRAY = false;
             USE_FFT  = false;
             USE_TEMPLATE = false;
         }
-        if (cvui::checkbox(frame, 15, 75, "Gray Scale", &USE_GRAY)){
+
+        cvui::printf(frame,  20, 115, 0.4, 0xeeeeee, "Color Spaces");
+        if (cvui::checkbox(frame, 30, 135, "Gray Scale", &USE_GRAY)){
             USE_MEAN_FILTER = false;
             USE_LAPLACIAN_FILTER = false;
             USE_CHROMATIC = false;
@@ -297,23 +300,25 @@ int cudaMain(int argc, char **argv)
             USE_TEMPLATE = false;
         }
 
-        if (cvui::checkbox(frame, 15, 95, "Chromatic", &USE_CHROMATIC)){
+        if (cvui::checkbox(frame, 30, 155, "Chromatic", &USE_CHROMATIC)){
             USE_MEAN_FILTER = false;
             USE_LAPLACIAN_FILTER = false;
             USE_GRAY = false;
             USE_FFT  = false;
             USE_TEMPLATE = false;
         }
-
-        if (cvui::checkbox(frame, 15, 115, "Fourier", &USE_FFT)){
+        
+        cvui::printf(frame,  20, 185, 0.4, 0xeeeeee, "Frecuency domain");
+        if (cvui::checkbox(frame, 30, 205, "Fourier", &USE_FFT)){
             USE_MEAN_FILTER = false;
             USE_LAPLACIAN_FILTER = false;
             USE_GRAY = false;
             USE_CHROMATIC = false;
             USE_TEMPLATE = false;
         }
-
-        if (cvui::checkbox(frame, 15, 135, "Template Matching   ", &USE_TEMPLATE)){
+        
+        cvui::printf(frame,  20, 235, 0.4, 0xeeeeee, "Image Analysis");
+        if (cvui::checkbox(frame, 30, 255, "Template Matching   ", &USE_TEMPLATE)){
             USE_MEAN_FILTER = false;
             USE_LAPLACIAN_FILTER = false;
             USE_GRAY = false;
@@ -328,17 +333,21 @@ int cudaMain(int argc, char **argv)
                     USE_FFT              * 32 +
                     USE_TEMPLATE         * 64;
 
-        cvui::trackbar(frame, 828, 550, 300, &brig,   0,  255,   1, "",cvui::TRACKBAR_HIDE_LABELS);
-        cvui::trackbar(frame, 828, 585, 300, &cont, 0.1, 100.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS);
-        cvui::trackbar(frame, 828, 615, 300, &iter, 0.0, 20.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS); //"%1.Lf"
+        
+        cvui::trackbar(frame, 828, 550, 300, &iter, 0.0, 20.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS); //"%1.Lf"
+        cvui::trackbar(frame, 828, 585, 300, &brig,   0,  255,   1, "",cvui::TRACKBAR_HIDE_LABELS);
+        cvui::trackbar(frame, 828, 615, 300, &cont, 0.1, 100.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS);
 
-        cvui::printf(frame, 760, 570, 0.4, 0xeeeeee, "Brightness");
-        cvui::printf(frame, 760, 605, 0.4, 0xeeeeee, "Contrast");
-        cvui::printf(frame, 760, 635, 0.4, 0xeeeeee, "Mean Filter");
+        cvui::printf(frame, 760, 570, 0.4, 0xeeeeee, "Mean Filter");
+        cvui::printf(frame, 760, 605, 0.4, 0xeeeeee, "Brightness");
+        cvui::printf(frame, 760, 635, 0.4, 0xeeeeee, "Contrast");
+        
+        // 570, 605, 635
         cvui::printf(frame,  20, 300, 0.4, 0xeeeeee, "Filename : %s", filename);
         cvui::printf(frame,  20, 320, 0.4, 0xeeeeee, "Width  : %d", WIDTH);
         cvui::printf(frame,  20, 340, 0.4, 0xeeeeee, "Height : %d", HEIGHT);
         cvui::printf(frame,  20, 360, 0.4, 0xeeeeee, "Depth  : %d", DEPTH);
+
         if(cvui::button(frame, 10, 680, "&Quit")){
             break;
         }
@@ -347,6 +356,10 @@ int cudaMain(int argc, char **argv)
         int xpos =  (int)((520 - IMAGE.cols)/2) + 720;
         int ypos =  50+0;
         Mat2Mat(IMAGE, frame, ypos, xpos);
+
+        inputbox_factor = getResizeFactor(WIDTH, HEIGHT, 280);
+        cv::resize(img, inputbox, cv::Size(), inputbox_factor, inputbox_factor, cv::INTER_CUBIC);
+        Mat2Mat(inputbox, frame, 400, 410);
         cv::imshow(WINDOW_NAME, frame);
         
         k = cv::waitKey(1);

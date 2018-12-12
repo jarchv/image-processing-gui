@@ -20,7 +20,7 @@ bool USE_FFT              = false;
 bool USE_TEMPLATE         = false;  
 bool DONE                 = true;
    
-
+double inputbox_factor;
    
 int SET_CODE = USE_MEAN_FILTER      *  2 + 
                 USE_LAPLACIAN_FILTER *  4 +

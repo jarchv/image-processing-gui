@@ -571,11 +571,11 @@ unsigned char* FFT(unsigned char* src, int width, int height)
 * =========================================================================
 */
 
-double getResizeFactor(int width, int height)
+double getResizeFactor(int width, int height, int boxDim)
 {
     double maxDim = (double)max(width,height);
 
-    double ftr = 480/maxDim;
+    double ftr = boxDim/maxDim;
     ftr = (ftr > 1) ? 1: ftr;
     
     return ftr;
