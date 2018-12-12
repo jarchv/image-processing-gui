@@ -180,7 +180,10 @@ int cudaMain(int argc, char **argv)
             }
             case 32: {
                 if (DONE){
-                    grayimg = toGray(mdata, WIDTH, HEIGHT);
+                    copy(mdata, toDisplay, WIDTH*HEIGHT*3);
+                    for (int i = 0; i < (int)iter; i++)
+                        toDisplay = meanFilter(toDisplay, WIDTH, HEIGHT);
+                    grayimg = toGray(toDisplay, WIDTH, HEIGHT);
                     img2fft = FFT(grayimg, HEIGHT, WIDTH);
                     imgBC   = BC(img2fft, (float)brig, cont, WIDTH * HEIGHT);
 
@@ -194,6 +197,7 @@ int cudaMain(int argc, char **argv)
                         swapGray.copyTo(IMAGE);
                     prev_brig = brig;
                     prev_cont = cont; 
+                    prev_iter = (int)iter;
                     DONE = false;
                 }
                 break;

@@ -6,7 +6,7 @@ int HEIGHT = 0;
 int DEPTH  = 24;
 
 const char* filename;
-double iter               = 1;
+double iter               = 0;
 int   brig                = 80;
 int   prev_brig           = brig;
 double cont               = 10.0;
