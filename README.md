@@ -18,15 +18,15 @@ make
 
 2. Abrir una imagen en formato BMP.
 ```
-./imgpro 1BIT.BMP # 4BITS.BMP, 8BITS.BMP, 24BITS.BMP
+./imgpro 1BIT.BMP       #4BITS.BMP, 8BITS.BMP, 24BITS.BMP
 ```
-2. Abrir una imagens como PNG, JPG, ...
+2. Abrir imagens PNG, JPG, ...
 ```
 ./imgpro -t PNG.png
 ```
 
 ### Funciones
-1. Adquisición y Representación de imágenes:
+1. Adquisición y representación de imágenes:
     - Escritura y lectura de archivos BMP de 1, 4 ,8 y 24 bits.
 2. Procesamiento global de imágenes:
     - Constraste.
@@ -47,21 +47,21 @@ make
 
 ### Interface Grágica
 
-Para una imágen BMP de 8 bits.
+Para una imagen BMP de 8 bits.
 ```
 ./imgpro 8BITS.BMP
 ```
 <img src='data/readme1.png' width=780>
 
 ### Filtro Laplaciano
-Para una imágen PNG.
+Para una imagen PNG.
 ```
 ./imgpro -t lenna.png
 ```
 <img src='data/readme2.png' width=780>
 
 ### Transformada de fourier
-Para una imágen PNG.
+Para una imagen PNG.
 ```
 ./imgpro -t car.png
 ```
@@ -72,22 +72,22 @@ Seleccionar la casilla **Template Matching**.<br><br>
 <img src='data/readme4.png' width=780>
 
 ## Instrucciones
-1. La barra de **Mean Filter** solo está activada cuando se activa la casilla **Mean Filter** o cuando se
-   activa la casilla **Fourier**, en este último caso la funcion de Transformada de Fourier se ejecuta sobre la 
-   imagen despues de aplicar la función **Mean Filter**.
+1. La barra de **Mean Filter** solo está activada cuando se activan la casillas **Mean Filter** o **Fourier**, en este último caso la funcion de Transformada de Fourier se ejecuta sobre la imagen despues de aplicar la función **Mean Filter**.
 
 2. La barras de **Brightness** y **Contrast** solo estan activadas cuando no se tiene ninguna casilla activada o 
-   cuando se activa la casilla **Fourier**. Esto lograr una mejor visualización de la Transformada de Fourier.
+   cuando se activa la casilla **Fourier**; esto para lograr una mejor visualización.
 
 3. Para la lectura de archivos es necesario colocarlos dentro de la carpeta **files**.
 
 ## Programa
 La interfaz gráfica esta hecha en [CVUI](https://github.com/ocornut/imgui), una libreria basada en OpenCV que
 permite un fácil manipulacion de los elementos de una ventana. Las funciones fueron realizadas en **CUDA** y enlazadas
-al programa en C++.
+al programa principal en C++.
 
 ## Requerimientos
 1. OpenCV 2.4.9
 2. GCC version 5.4
 3. Cuda Toolkit 9.0
 4. Targeta Gráfica GTX 780 Ti
+
+Email jose.chavez.alvarez@ucsp.edupe
