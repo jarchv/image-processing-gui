@@ -27,7 +27,7 @@ make
 
 ### Funciones
 1. Adquisición y Representación de imágenes:
-    - Lectura y Escritura de archivos BMP.
+    - Lectura y Escritura de archivos BMP de 1, 4 ,8 y 24 bits.
 2. Procesamiento global de imágenes:
     - Constraste.
     - Brillo.
