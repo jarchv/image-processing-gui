@@ -29,21 +29,19 @@ make
 
 ### Funciones
 1. Adquisición y representación de imágenes:
-    - Escritura y lectura de archivos BMP de 1, 4 ,8 y 24 bits.
+    - Lectura de archivos BMP de 1, 4 ,8 y 24 bits.
 2. Procesamiento global de imágenes:
     - Constraste.
     - Brillo.
 3. Filtros:
     - Mean Filter.
     - Laplacian Filter.
-4. Transformationces Geometricas:
-    - Transformaciones bilineales.
-5. Espacios de color y dominio de frecuencia:
+4. Espacios de color y dominio de frecuencia:
     - Escala de grises.
     - Coordenas cromáticas.
     - Transformada de Fourier.
     - Transformada Wavelet.
-6. Análisis de imágenes
+5. Análisis de imágenes
     - Template matching: Con suma de diferencias al cuadrado normalizadas.
 
 ### Interface Grágica
