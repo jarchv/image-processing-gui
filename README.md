@@ -1,5 +1,7 @@
 # Image Processing GUI (C++ and CUDA)
 
+**Ver demostración en** [Vimeo](https://vimeo.com/306504977).
+
 ### Crear el ejecutable
 
 ```
@@ -39,11 +41,10 @@ make
 5. Espacios de color y dominio de frecuencia:
     - Escala de grises.
     - Coordenas cromáticas.
-    - Transformada de Fourier
-    - Transformada inversa de Fourier
+    - Transformada de Fourier.
+    - Transformada Wavelet.
 6. Análisis de imágenes
     - Template matching: Con suma de diferencias al cuadrado normalizadas.
-
 
 ### Interface Grágica
 
@@ -74,8 +75,7 @@ Seleccionar la casilla **Template Matching**.<br><br>
 ## Instrucciones
 1. La barra de **Mean Filter** solo está activada cuando se activan la casillas **Mean Filter** o **Fourier**, en este último caso la funcion de Transformada de Fourier se ejecuta sobre la imagen despues de aplicar la función **Mean Filter**.
 
-2. La barras de **Brightness** y **Contrast** solo estan activadas cuando no se tiene ninguna casilla activada o 
-   cuando se activa la casilla **Fourier**; esto para lograr una mejor visualización.
+2. La barras de **Brightness** y **Contrast** solo estan activadas cuando no se tiene activa la casilla **Fourier**; esto para lograr una mejor visualización.
 
 3. Para la lectura de archivos es necesario colocarlos dentro de la carpeta **files**.
 

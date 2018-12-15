@@ -14,20 +14,24 @@ double prev_cont          = cont;
 int prev_iter             = (int)iter;
 bool USE_MEAN_FILTER      = false;
 bool USE_LAPLACIAN_FILTER = false;
+bool USE_SHARPEN_FILTER   = false;
 bool USE_CHROMATIC        = false;
 bool USE_GRAY             = false;
 bool USE_FFT              = false;
+bool USE_WAVELET          = false;    
 bool USE_TEMPLATE         = false;  
 bool DONE                 = true;
    
 double inputbox_factor;
    
-int SET_CODE = USE_MEAN_FILTER      *  2 + 
-                USE_LAPLACIAN_FILTER *  4 +
-                USE_GRAY             *  8 +
-                USE_CHROMATIC        * 16 +
-                USE_FFT              * 32 +
-                USE_TEMPLATE         * 64;
+int SET_CODE =      USE_MEAN_FILTER      *  2  + 
+                    USE_LAPLACIAN_FILTER *  4  +
+                    USE_SHARPEN_FILTER   *  8  +
+                    USE_GRAY             * 16  +
+                    USE_CHROMATIC        * 32  +
+                    USE_FFT              * 64  +
+                    USE_WAVELET          * 128 +
+                    USE_TEMPLATE         * 256;
 
 double factor;
 

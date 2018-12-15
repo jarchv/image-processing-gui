@@ -19,11 +19,18 @@ unsigned char *laplacianFilter(
     int width, 
     int height);
 
+unsigned char *sharpenFilter(
+    unsigned char* data,
+    int width, 
+    int height);
+    
 unsigned char * FilterOp(
     unsigned char* data,
     int width,
     int height,
     float* kernel);
+
+void HaarWavelet(cv::Mat &src,int NIter);
 
 float*          getSumRGB(unsigned char* src, int width, int height);
 unsigned char*  toGray(unsigned char* src, int with, int height);

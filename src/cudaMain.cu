@@ -93,13 +93,14 @@ int cudaMain(int argc, char **argv)
 
     toDisplay = new unsigned char[WIDTH * HEIGHT * 3];
     
+    cv::VideoWriter video("out.avi", CV_FOURCC('M','J','P','G'),30, cv::Size(1280,720),true);
+
     while (true)
     {
         frame = cv::Scalar(38, 36, 26);     
-        cvui::window(frame,  10, 10, 260, 280, "Settings");
-        cvui::window(frame, 720, 10, 520, 680, "Result");
-        cvui::window(frame, 620, 10,  80, 100, "Template");
-        cvui::window(frame, 400, 370,  300, 320, "Input");
+        cvui::window(frame,  10,  10, 260, 330, "Settings");
+        cvui::window(frame, 720,  10, 520, 680, "Result");
+        cvui::window(frame, 400, 370, 300, 320, "Input");
         
         if (prev_iter != (int)iter)
             DONE = true;
@@ -119,11 +120,11 @@ int cudaMain(int argc, char **argv)
             }
             case 2: {
                 if (DONE){
-
                     copy(mdata, toDisplay, WIDTH*HEIGHT*3);
                     for (int i = 0; i < (int)iter; i++)
                         toDisplay = meanFilter(toDisplay, WIDTH, HEIGHT);
                     imgFrame = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
+                    //cvtColor(imgFrame, imgFrame, cv::COLOR_BGR2RGB);
                     if (max(imgFrame.cols, imgFrame.rows) > MAX_DIM)
                         cv::resize(imgFrame, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
                     else
@@ -139,6 +140,7 @@ int cudaMain(int argc, char **argv)
                     copy(mdata, toDisplay, WIDTH*HEIGHT*3);
                     toDisplay = laplacianFilter(toDisplay, WIDTH, HEIGHT);
                     imgFrame = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
+                    
                     if (max(imgFrame.cols, imgFrame.rows) > MAX_DIM)
                         cv::resize(imgFrame, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
                     else
@@ -150,7 +152,24 @@ int cudaMain(int argc, char **argv)
                 }
                 break;
             }
+
             case 8: {
+                if (DONE){
+                    copy(mdata, toDisplay, WIDTH*HEIGHT*3);
+                    toDisplay = sharpenFilter(toDisplay, WIDTH, HEIGHT);
+                    imgFrame = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, toDisplay);
+                    //cvtColor(imgFrame, imgFrame, cv::COLOR_BGR2RGB);
+
+                    if (max(imgFrame.cols, imgFrame.rows) > MAX_DIM)
+                        cv::resize(imgFrame, IMAGE, cv::Size(), factor, factor, cv::INTER_CUBIC);
+                    else
+                        imgFrame.copyTo(IMAGE);
+                    DONE = false;   
+                }
+                break;
+            }
+
+            case 16: {
                 if (DONE) {
                     grayimg = toGray(mdata, WIDTH, HEIGHT);
                     grayCV  = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC1, grayimg);
@@ -163,7 +182,7 @@ int cudaMain(int argc, char **argv)
                 }
                 break;
             }
-            case 16: {
+            case 32: {
                 if (DONE){
                     chromimg = toChromatic(mdata, WIDTH, HEIGHT);
                     chromCV  = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, chromimg);
@@ -177,7 +196,7 @@ int cudaMain(int argc, char **argv)
                 }
                 break;
             }
-            case 32: {
+            case 64: {
                 if (DONE){
                     copy(mdata, toDisplay, WIDTH*HEIGHT*3);
                     for (int i = 0; i < (int)iter; i++)
@@ -201,8 +220,31 @@ int cudaMain(int argc, char **argv)
                 }
                 break;
             }
+            case  128: {
+                if (DONE)
+                {
+                    cv::Mat src;
+                    img_res.copyTo(src);
 
-            case 64: {
+                    std::vector<cv::Mat> bgr(3);
+                    split(src,bgr);
+                    
+                    for (int i = 0; i < 3; i++)
+                    {
+                        bgr[i].convertTo(bgr[i],CV_32FC1);
+                        HaarWavelet(bgr[i],2);
+
+                        cv::normalize(bgr[i], bgr[i], 0, 250, cv::NORM_MINMAX, -1, cv::Mat());
+                        bgr[i].convertTo(bgr[i], CV_8U);
+                    }
+
+                    cv::merge(bgr, IMAGE);
+                    DONE = false;
+                }
+                break;
+            }
+            case 256: {
+                cvui::window(frame, 620, 10,  80, 100, "Template");
                 if (DONE){
                     templ    = cv::imread("../files/temp.png");
                     cv::VideoCapture cap("../files/videodemo.mp4");
@@ -219,7 +261,7 @@ int cudaMain(int argc, char **argv)
                         int count = 0;
                         for(;;)
                         {
-                            cvui::checkbox(frame, 15, 135, "Template Matching   ", &USE_TEMPLATE);
+                            cvui::checkbox(frame, 30, 295, "Template Matching   ", &USE_TEMPLATE);
                             cap >> frameCap;
                             if(frameCap.empty())
                                 break;
@@ -250,6 +292,7 @@ int cudaMain(int argc, char **argv)
                             Mat2Mat(templ_res, frame, 40, 630);
 
                             cv::imshow(WINDOW_NAME, frame);
+                            video.write(frame);
                             k = cv::waitKey(1);
                             if (k == 27){
                                 std::cout << "[ESC] : break" << std::endl;
@@ -262,7 +305,6 @@ int cudaMain(int argc, char **argv)
                     DONE = false;
                 }
                 factor = getResizeFactor(img.cols, img.rows, 480);
-                cvui::checkbox(frame, 15, 135, "Template Matching   ", &USE_TEMPLATE);
                 break;
             }
             default:{
@@ -272,81 +314,117 @@ int cudaMain(int argc, char **argv)
 
         
 
-        Mat2Mat(templ_res, frame, 40, 630);
+        //Mat2Mat(templ_res, frame, 40, 630);
 
         cvui::printf(frame,  20, 45, 0.4, 0xeeeeee, "Filters");
 
         if (cvui::checkbox(frame, 30, 65, "Mean Filter", &USE_MEAN_FILTER)){
             USE_LAPLACIAN_FILTER = false;
-            USE_CHROMATIC = false;
-            USE_GRAY = false;
-            USE_FFT  = false;
-            USE_TEMPLATE = false;
+            USE_SHARPEN_FILTER   = false;
+            USE_CHROMATIC        = false;
+            USE_GRAY             = false;
+            USE_FFT              = false;
+            USE_TEMPLATE         = false;
+            USE_WAVELET          = false;
         } 
+
         if (cvui::checkbox(frame, 30, 85, "Laplacian Filter", &USE_LAPLACIAN_FILTER)){
-            USE_MEAN_FILTER = false;
-            USE_CHROMATIC = false;
-            USE_GRAY = false;
-            USE_FFT  = false;
-            USE_TEMPLATE = false;
+            USE_MEAN_FILTER      = false;
+            USE_SHARPEN_FILTER   = false;
+            USE_CHROMATIC        = false;
+            USE_GRAY             = false;
+            USE_FFT              = false;
+            USE_TEMPLATE         = false;
+            USE_WAVELET          = false;  
         }
 
-        cvui::printf(frame,  20, 115, 0.4, 0xeeeeee, "Color Spaces");
-        if (cvui::checkbox(frame, 30, 135, "Gray Scale", &USE_GRAY)){
-            USE_MEAN_FILTER = false;
+        if (cvui::checkbox(frame, 30, 105, "Sharpen Filter", &USE_SHARPEN_FILTER)){
+            USE_MEAN_FILTER      = false;
             USE_LAPLACIAN_FILTER = false;
-            USE_CHROMATIC = false;
-            USE_FFT  = false;
-            USE_TEMPLATE = false;
+            USE_CHROMATIC        = false;
+            USE_GRAY             = false;
+            USE_FFT              = false;
+            USE_TEMPLATE         = false;
+            USE_WAVELET          = false;
         }
 
-        if (cvui::checkbox(frame, 30, 155, "Chromatic", &USE_CHROMATIC)){
-            USE_MEAN_FILTER = false;
+        cvui::printf(frame,  20, 135, 0.4, 0xeeeeee, "Color Spaces");
+        if (cvui::checkbox(frame, 30, 155, "Gray Scale", &USE_GRAY)){
+            USE_MEAN_FILTER      = false;
             USE_LAPLACIAN_FILTER = false;
-            USE_GRAY = false;
-            USE_FFT  = false;
-            USE_TEMPLATE = false;
+            USE_SHARPEN_FILTER   = false;
+            USE_CHROMATIC        = false;
+            USE_FFT              = false;
+            USE_TEMPLATE         = false;
+            USE_WAVELET          = false;
+        }
+
+        if (cvui::checkbox(frame, 30, 175, "Chromatic", &USE_CHROMATIC)){
+            USE_MEAN_FILTER      = false;
+            USE_LAPLACIAN_FILTER = false;
+            USE_SHARPEN_FILTER   = false;
+            USE_GRAY             = false;
+            USE_FFT              = false;
+            USE_WAVELET          = false;
+            USE_TEMPLATE         = false;            
         }
         
-        cvui::printf(frame,  20, 185, 0.4, 0xeeeeee, "Frecuency domain");
-        if (cvui::checkbox(frame, 30, 205, "Fourier", &USE_FFT)){
-            USE_MEAN_FILTER = false;
+        cvui::printf(frame,  20, 205, 0.4, 0xeeeeee, "Frecuency domain");
+        if (cvui::checkbox(frame, 30, 225, "Fourier", &USE_FFT)){
+            USE_MEAN_FILTER      = false;
             USE_LAPLACIAN_FILTER = false;
-            USE_GRAY = false;
-            USE_CHROMATIC = false;
-            USE_TEMPLATE = false;
+            USE_SHARPEN_FILTER   = false;
+            USE_GRAY             = false;
+            USE_CHROMATIC        = false;
+            USE_WAVELET          = false;
+            USE_TEMPLATE         = false;
         }
-        
-        cvui::printf(frame,  20, 235, 0.4, 0xeeeeee, "Image Analysis");
-        if (cvui::checkbox(frame, 30, 255, "Template Matching   ", &USE_TEMPLATE)){
-            USE_MEAN_FILTER = false;
+        if (cvui::checkbox(frame, 30, 245, "Wavelet", &USE_WAVELET)){
+            USE_MEAN_FILTER      = false;
             USE_LAPLACIAN_FILTER = false;
-            USE_GRAY = false;
-            USE_CHROMATIC = false;
-            USE_FFT = false;
+            USE_SHARPEN_FILTER   = false;
+            USE_GRAY             = false;
+            USE_CHROMATIC        = false;
+            USE_TEMPLATE         = false;
+            USE_FFT              = false;
         }
 
-        SET_CODE =  USE_MEAN_FILTER      *  2 + 
-                    USE_LAPLACIAN_FILTER *  4 +
-                    USE_GRAY             *  8 +
-                    USE_CHROMATIC        * 16 +
-                    USE_FFT              * 32 +
-                    USE_TEMPLATE         * 64;
+        cvui::printf(frame,  20, 275, 0.4, 0xeeeeee, "Image Analysis");
+        if (cvui::checkbox(frame, 30, 295, "Template Matching   ", &USE_TEMPLATE)){
+            USE_MEAN_FILTER      = false;
+            USE_LAPLACIAN_FILTER = false;
+            USE_SHARPEN_FILTER   = false;
+            USE_GRAY             = false;
+            USE_CHROMATIC        = false;
+            USE_FFT              = false;
+            USE_WAVELET          = false;
+        }
+
+        SET_CODE =  USE_MEAN_FILTER      *  2  + 
+                    USE_LAPLACIAN_FILTER *  4  +
+                    USE_SHARPEN_FILTER   *  8  +
+                    USE_GRAY             * 16  +
+                    USE_CHROMATIC        * 32  +
+                    USE_FFT              * 64  +
+                    USE_WAVELET          * 128 +
+                    USE_TEMPLATE         * 256;
 
         
         cvui::trackbar(frame, 828, 550, 300, &iter, 0.0, 20.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS); //"%1.Lf"
         cvui::trackbar(frame, 828, 585, 300, &brig,   0,  255,   1, "",cvui::TRACKBAR_HIDE_LABELS);
         cvui::trackbar(frame, 828, 615, 300, &cont, 0.1, 100.0, 0.1, "",cvui::TRACKBAR_HIDE_LABELS);
 
-        cvui::printf(frame, 760, 570, 0.4, 0xeeeeee, "Mean Filter");
-        cvui::printf(frame, 760, 605, 0.4, 0xeeeeee, "Brightness");
-        cvui::printf(frame, 760, 635, 0.4, 0xeeeeee, "Contrast");
-        
+        cvui::printf(frame, 760 , 570, 0.4, 0xeeeeee, "Mean Filter");
+        cvui::printf(frame, 760 , 605, 0.4, 0xeeeeee, "Brightness");
+        cvui::printf(frame, 1120, 605, 0.4, 0xeeeeee, "(Fourier)");
+        cvui::printf(frame, 760 , 635, 0.4, 0xeeeeee, "Contrast");
+        cvui::printf(frame, 1120, 635, 0.4, 0xeeeeee, "(Fourier)");
+
         // 570, 605, 635
-        cvui::printf(frame,  20, 300, 0.4, 0xeeeeee, "Filename : %s", filename);
-        cvui::printf(frame,  20, 320, 0.4, 0xeeeeee, "Width  : %d", WIDTH);
-        cvui::printf(frame,  20, 340, 0.4, 0xeeeeee, "Height : %d", HEIGHT);
-        cvui::printf(frame,  20, 360, 0.4, 0xeeeeee, "Depth  : %d", DEPTH);
+        cvui::printf(frame,  20, 350, 0.4, 0xeeeeee, "Filename : %s", filename);
+        cvui::printf(frame,  20, 370, 0.4, 0xeeeeee, "Width  : %d", WIDTH);
+        cvui::printf(frame,  20, 390, 0.4, 0xeeeeee, "Height : %d", HEIGHT);
+        cvui::printf(frame,  20, 410, 0.4, 0xeeeeee, "Depth  : %d", DEPTH);
 
         if(cvui::button(frame, 10, 680, "&Quit")){
             break;
@@ -360,8 +438,10 @@ int cudaMain(int argc, char **argv)
         inputbox_factor = getResizeFactor(WIDTH, HEIGHT, 280);
         cv::resize(img, inputbox, cv::Size(), inputbox_factor, inputbox_factor, cv::INTER_CUBIC);
         Mat2Mat(inputbox, frame, 400, 410);
-        cv::imshow(WINDOW_NAME, frame);
         
+        
+        cv::imshow(WINDOW_NAME, frame);
+        video.write(frame);
         k = cv::waitKey(1);
         if (k == 27){
             std::cout << "[ESC] : break" << std::endl;
@@ -376,5 +456,7 @@ int cudaMain(int argc, char **argv)
     free(img2fft);
     free(imgBC);
 
+    video.release();
+    //cvReleaseVideoWriter( &video );
     return 0;   
 }

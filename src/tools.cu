@@ -77,6 +77,10 @@ __global__ void FilterOp_gpu(unsigned char* dev_src, unsigned char* dev_res, int
         else
             tmp += ((float)dev_src[pos]*dev_kernel[8]);   
         
+        if (tmp > 255)
+            tmp = 255;
+        else if (tmp < 0)
+            tmp = 0;
         dev_res[pos] = (unsigned char)tmp; 
     }
 }
@@ -148,6 +152,26 @@ unsigned char *laplacianFilter(unsigned char* data, int width, int height)
     kernel[2] =  0.0;
     kernel[3] = -1.0;
     kernel[4] =  4.0;
+    kernel[5] = -1.0;
+    kernel[6] =  0.0;
+    kernel[7] = -1.0;
+    kernel[8] =  0.0;
+
+    res = FilterOp(data , width, height, kernel);
+    return res;
+}
+
+unsigned char *sharpenFilter(unsigned char* data, int width, int height)
+{
+    unsigned char* res;
+    float *kernel = new float[9];
+
+
+    kernel[0] =  0.0;
+    kernel[1] = -1.0;
+    kernel[2] =  0.0;
+    kernel[3] = -1.0;
+    kernel[4] =  5.0;
     kernel[5] = -1.0;
     kernel[6] =  0.0;
     kernel[7] = -1.0;
@@ -566,6 +590,39 @@ unsigned char* FFT(unsigned char* src, int width, int height)
 
     return res;
 }
+
+void HaarWavelet(cv::Mat &src, int NIter)
+{
+    float c,dh,dv,dd;
+    cv::Mat dst;
+    dst.create(src.rows, src.cols, CV_32FC1);
+    //assert( src.type() == CV_32FC1 );
+    //assert( dst.type() == CV_32FC1 );
+    int width = src.cols;
+    int height = src.rows;
+    for (int k=0;k<NIter;k++) 
+    {
+        for (int y=0;y<(height>>(k+1));y++)
+        {
+            for (int x=0; x<(width>>(k+1));x++)
+            {
+                c=(src.at<float>(2*y,2*x)+src.at<float>(2*y,2*x+1)+src.at<float>(2*y+1,2*x)+src.at<float>(2*y+1,2*x+1))*0.5;
+                dst.at<float>(y,x)=c;
+
+                dh=(src.at<float>(2*y,2*x)+src.at<float>(2*y+1,2*x)-src.at<float>(2*y,2*x+1)-src.at<float>(2*y+1,2*x+1))*0.5;
+                dst.at<float>(y,x+(width>>(k+1)))=dh;
+
+                dv=(src.at<float>(2*y,2*x)+src.at<float>(2*y,2*x+1)-src.at<float>(2*y+1,2*x)-src.at<float>(2*y+1,2*x+1))*0.5;
+                dst.at<float>(y+(height>>(k+1)),x)=dv;
+
+                dd=(src.at<float>(2*y,2*x)-src.at<float>(2*y,2*x+1)-src.at<float>(2*y+1,2*x)+src.at<float>(2*y+1,2*x+1))*0.5;
+                dst.at<float>(y+(height>>(k+1)),x+(width>>(k+1)))=dd;
+            }
+        }
+        dst.copyTo(src);
+    }   
+}
+
 /*
 * UTILS
 * =========================================================================
@@ -681,6 +738,7 @@ cv::Mat TemplateMatching(cv::Mat img,cv::Mat& img_display, cv::Mat templ)
 
     return result;
 }
+
 
 unsigned char *toArray(cv::Mat src)
 {
