@@ -52,25 +52,33 @@ Para una imagen BMP de 8 bits.
 ```
 ./imgpro 8BITS.BMP
 ```
-<img src='data/readme1.png' width=780>
+<img src='data/f1.png' width=780>
 
 ### Filtro Laplaciano
 Para una imagen PNG.
 ```
 ./imgpro -t lenna.png
 ```
-<img src='data/readme2.png' width=780>
+<img src='data/f2.png' width=780>
 
 ### Transformada de fourier
 Para una imagen PNG.
 ```
 ./imgpro -t car.png
 ```
-<img src='data/readme3.png' width=780>
+<img src='data/f3.png' width=780>
+
+### Transformada Wavelet
+Para una imagen PNG.
+```
+./imgpro -t lenna.png
+```
+<img src='data/f4.png' width=780>
+
 
 ## Template matching
 Seleccionar la casilla **Template Matching**.<br><br>
-<img src='data/readme4.png' width=780>
+<img src='data/f5.png' width=780>
 
 ## Instrucciones
 1. La barra de **Mean Filter** solo está activada cuando se activan la casillas **Mean Filter** o **Fourier**, en este último caso la funcion de Transformada de Fourier se ejecuta sobre la imagen despues de aplicar la función **Mean Filter**.

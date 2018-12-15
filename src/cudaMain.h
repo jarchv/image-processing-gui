@@ -5,7 +5,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#define WINDOW_NAME "foo"
+#define WINDOW_NAME "Image Processing"
 
 int    cudaMain(int argc, char **argv);
 void   Mat2Mat(cv::Mat& src, cv::Mat& dst, int x0, int y0);

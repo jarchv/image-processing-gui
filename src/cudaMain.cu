@@ -93,7 +93,7 @@ int cudaMain(int argc, char **argv)
 
     toDisplay = new unsigned char[WIDTH * HEIGHT * 3];
     
-    cv::VideoWriter video("out.avi", CV_FOURCC('M','J','P','G'),30, cv::Size(1280,720),true);
+    //cv::VideoWriter video("out.avi", CV_FOURCC('M','J','P','G'),30, cv::Size(1280,720),true);
 
     while (true)
     {
@@ -292,7 +292,7 @@ int cudaMain(int argc, char **argv)
                             Mat2Mat(templ_res, frame, 40, 630);
 
                             cv::imshow(WINDOW_NAME, frame);
-                            video.write(frame);
+                            //video.write(frame);
                             k = cv::waitKey(1);
                             if (k == 27){
                                 std::cout << "[ESC] : break" << std::endl;
@@ -441,7 +441,7 @@ int cudaMain(int argc, char **argv)
         
         
         cv::imshow(WINDOW_NAME, frame);
-        video.write(frame);
+        //video.write(frame);
         k = cv::waitKey(1);
         if (k == 27){
             std::cout << "[ESC] : break" << std::endl;
@@ -456,7 +456,7 @@ int cudaMain(int argc, char **argv)
     free(img2fft);
     free(imgBC);
 
-    video.release();
+    //video.release();
     //cvReleaseVideoWriter( &video );
     return 0;   
 }
